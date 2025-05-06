@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-
 	"github.com/BuzzLyutic/Skill-sharing-web-platform/config"
 	"github.com/BuzzLyutic/Skill-sharing-web-platform/routes"
 )

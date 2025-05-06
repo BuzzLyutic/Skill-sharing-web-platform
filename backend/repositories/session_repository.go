@@ -1,13 +1,15 @@
 package repositories
 
 import (
-	"github.com/BuzzLyutic/Skill-sharing-web-platform/models"
-	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
+	"github.com/lib/pq"
+	"github.com/BuzzLyutic/Skill-sharing-web-platform/models"
+	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 )
 
 // Определим кастомные ошибки для лучшей обработки в контроллере
@@ -235,4 +237,79 @@ func (r *SessionRepository) LeaveSession(ctx context.Context, sessionID, userID 
 	}
 
 	return nil
+}
+
+
+// GetRecommendedSessionsForUser получает рекомендуемые сессии для конкретного пользователя
+// limit - максимальное количество рекомендуемых сессий
+func (r *SessionRepository) GetRecommendedSessionsForUser(ctx context.Context, userID uuid.UUID, userSkills []string, limit int) ([]models.Session, error) {
+	sessions := []models.Session{}
+	var query string
+	var args []interface{}
+
+	// Логика рекомендаций:
+	// 1. Если у пользователя есть навыки, ищем сессии по этим навыкам (категориям)
+	// 2. Если нет, можно искать по категориям сессий, в которых он участвовал (более сложный запрос)
+	// 3. Или сессии от пользователей с высоким рейтингом
+	// Для MVP упростим: сначала по навыкам, если нет, то просто популярные/новые.
+
+	if len(userSkills) > 0 {
+		// Ищем сессии, где категория совпадает с одним из навыков пользователя
+		// Исключаем сессии, созданные самим пользователем и те, к которым он уже присоединился
+        // Исключаем прошедшие сессии
+		query = `
+			SELECT s.* FROM sessions s
+			LEFT JOIN session_participants sp ON s.id = sp.session_id AND sp.user_id = $1
+			WHERE s.category = ANY($2)
+			  AND s.creator_id != $1
+			  AND sp.session_id IS NULL
+              AND s.date_time > NOW()
+			ORDER BY s.date_time ASC
+			LIMIT $3`
+		args = append(args, userID, pq.Array(userSkills), limit)
+	} else {
+		// Если у пользователя нет навыков, рекомендуем просто новые или популярные сессии,
+		// к которым он не присоединился и которые он не создавал.
+        // Исключаем прошедшие сессии
+		query = `
+			SELECT s.* FROM sessions s
+			LEFT JOIN session_participants sp ON s.id = sp.session_id AND sp.user_id = $1
+			WHERE s.creator_id != $1
+			  AND sp.session_id IS NULL
+              AND s.date_time > NOW()
+			ORDER BY s.created_at DESC, s.date_time ASC
+			LIMIT $2`
+		args = append(args, userID, limit)
+	}
+
+	err := r.db.SelectContext(ctx, &sessions, query, args...)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		log.Printf("ERROR getting recommended sessions for user %s: %v", userID, err)
+		return nil, fmt.Errorf("%w: failed to get recommended sessions: %v", ErrDatabase, err)
+	}
+	if sessions == nil {
+		sessions = []models.Session{}
+	}
+	return sessions, nil
+}
+
+// GetGeneralRecommendedSessions получает общерекомендуемые сессии (для неавторизованных или как fallback)
+func (r *SessionRepository) GetGeneralRecommendedSessions(ctx context.Context, limit int) ([]models.Session, error) {
+	sessions := []models.Session{}
+	// Рекомендуем новые или скоро начинающиеся сессии
+    // Исключаем прошедшие сессии
+	query := `
+		SELECT * FROM sessions
+        WHERE date_time > NOW()
+		ORDER BY date_time ASC, created_at DESC
+		LIMIT $1`
+	err := r.db.SelectContext(ctx, &sessions, query, limit)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		log.Printf("ERROR getting general recommended sessions: %v", err)
+		return nil, fmt.Errorf("%w: failed to get general recommended sessions: %v", ErrDatabase, err)
+	}
+	if sessions == nil {
+		sessions = []models.Session{}
+	}
+	return sessions, nil
 }

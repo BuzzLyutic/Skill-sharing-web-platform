@@ -1,7 +1,7 @@
 // src/app/page.tsx
 import Link from 'next/link';
 import Button from '@/components/Button';
-import ReduxDemo from "@/components/ReduxDemo"; 
+import RecommendedSessions from '@/components/RecommendedSessions';
 
 export default function HomePage() {
   return (
@@ -10,15 +10,14 @@ export default function HomePage() {
       <p className="mb-8 text-lg text-gray-600">
         Find experts, share your knowledge, and grow together.
       </p>
-      <div className="space-x-4">
-        <Link href="/login">
-           <Button>Login</Button>
+      <div className="space-x-4 mb-12"> {/* Добавим отступ снизу */}
+        <Link href="/sessions">
+           <Button size="lg">Browse All Sessions</Button> {/* Сделаем кнопку побольше */}
         </Link>
-         <Link href="/register">
-           <Button variant="secondary">Register</Button>
-        </Link>
+        {/* Убрал кнопки логина/регистрации отсюда, т.к. они есть в Navbar */}
       </div>
-      {<ReduxDemo />}
+      {/* Секция с рекомендуемыми сессиями */}
+      <RecommendedSessions />
     </div>
   );
 }

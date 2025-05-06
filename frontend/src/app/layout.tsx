@@ -4,7 +4,6 @@ import { Inter } from "next/font/google";
 import "@/styles/globals.css"; // Импорт Tailwind стилей
 import { AuthProvider } from "@/components/AuthProvider";
 import Navbar from "@/components/Navbar"; // Импортируем Navbar
-import ReduxProvider from "@/components/ReduxProvider"; 
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,14 +20,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ReduxProvider>
           <AuthProvider> {/* Оборачиваем всё в AuthProvider */}
             <Navbar /> {/* Добавляем Navbar */}
             <main className="container mx-auto px-4 py-8"> {/* Основной контент */}
               {children}
             </main>
           </AuthProvider>
-        </ReduxProvider>
       </body>
     </html>
   );

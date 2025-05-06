@@ -360,3 +360,48 @@ func (c *SessionController) LeaveSession(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Successfully left the session"})
 }
+
+
+// GetRecommendedSessions обрабатывает GET /api/sessions/recommended
+func (c *SessionController) GetRecommendedSessions(ctx *gin.Context) {
+	var recommendedSessions []models.Session
+	var err error
+	limit := 5 // Количество рекомендаций по умолчанию
+
+	userIDValue, userExists := ctx.Get(middleware.ContextUserIDKey) // Получаем ID пользователя, если он авторизован
+
+	requestContext := ctx.Request.Context()
+
+	if userExists {
+		userID, ok := userIDValue.(uuid.UUID)
+		if !ok {
+			log.Printf("ERROR: UserID in context is not uuid.UUID in GetRecommendedSessions")
+			// Если userID невалиден, ведем себя как неавторизованный
+			recommendedSessions, err = c.repo.GetGeneralRecommendedSessions(requestContext, limit)
+		} else {
+			// Получаем навыки пользователя (нужен доступ к UserRepository или передача навыков)
+			// Для простоты MVP, предположим, что навыки мы можем получить или они не важны для первой версии рекомендаций
+			// Здесь можно было бы вызвать userRepo.GetByID(userID) и взять user.Skills
+			// Пока что используем пустой срез навыков, что приведет к общей рекомендации для авторизованных
+			var userSkills []string
+            // TODO: Если есть userRepo, получить user.Skills
+            // tempUser, userErr := c.userRepo.GetByID(requestContext, userID) // Потребует внедрения userRepo
+            // if userErr == nil && tempUser != nil {
+            //     userSkills = tempUser.Skills // pq.StringArray нужно будет конвертировать в []string
+            // }
+
+			recommendedSessions, err = c.repo.GetRecommendedSessionsForUser(requestContext, userID, userSkills, limit)
+		}
+	} else {
+		// Неавторизованный пользователь
+		recommendedSessions, err = c.repo.GetGeneralRecommendedSessions(requestContext, limit)
+	}
+
+	if err != nil {
+		// Ошибка уже залогирована в репозитории
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve recommended sessions"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, recommendedSessions)
+}

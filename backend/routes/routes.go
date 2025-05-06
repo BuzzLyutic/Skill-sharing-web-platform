@@ -101,6 +101,7 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
             sessions := api.Group("/sessions")
             {
                 sessions.GET("", sessionController.GetAll)
+                sessions.GET("/recommended", sessionController.GetRecommendedSessions)
                 sessions.GET("/:id", sessionController.GetByID)
                 sessions.POST("", sessionController.Create)
                 sessions.PUT("/:id", sessionController.Update)
