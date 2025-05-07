@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/BuzzLyutic/Skill-sharing-web-platform/middleware"
 	"github.com/BuzzLyutic/Skill-sharing-web-platform/models"
@@ -51,21 +53,71 @@ func getUserIDFromContext(ctx *gin.Context) (uuid.UUID, bool) {
     return userID, true
 }
 
-// GetAll handles GET /sessions
+
+// GetAll (теперь с фильтрацией и пагинацией)
 func (c *SessionController) GetAll(ctx *gin.Context) {
-	// Передаем контекст запроса в репозиторий
-	sessions, err := c.repo.GetAll(ctx.Request.Context())
-	if err != nil {
-        log.Printf("ERROR getting all sessions: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve sessions"})
-		return
-	}
-    // Если сессий нет, лучше вернуть пустой массив, а не ошибку
-    if sessions == nil {
-        sessions = []models.Session{} // Гарантируем возврат [] вместо null в JSON
+    var filters models.SessionSearchFilters // Используем тип из репозитория или models
+
+    // Значения по умолчанию для пагинации
+    filters.Limit = 10 // Например, 10 на страницу
+    filters.Offset = 0
+    filters.ExcludePast = true // По умолчанию не показывать прошедшие
+
+    // Парсинг query параметров
+    filters.Query = ctx.Query("q")
+    filters.Category = ctx.Query("category")
+    filters.Location = ctx.Query("location")
+
+    if dateFromStr := ctx.Query("date_from"); dateFromStr != "" {
+        if t, err := time.Parse(time.RFC3339, dateFromStr); err == nil { // Ожидаем ISO 8601
+            filters.DateFrom = &t
+        } else {
+             log.Printf("WARN: Invalid date_from format: %s", dateFromStr)
+        }
     }
-	ctx.JSON(http.StatusOK, sessions)
+    if dateToStr := ctx.Query("date_to"); dateToStr != "" {
+        if t, err := time.Parse(time.RFC3339, dateToStr); err == nil {
+            filters.DateTo = &t
+        } else {
+            log.Printf("WARN: Invalid date_to format: %s", dateToStr)
+        }
+    }
+    if excludePastQuery := ctx.Query("exclude_past"); excludePastQuery != "" {
+        if excludePastQuery == "false" {
+            filters.ExcludePast = false
+        }
+    }
+
+    if limitStr := ctx.Query("limit"); limitStr != "" {
+        if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+            filters.Limit = l
+        }
+    }
+    if pageStr := ctx.Query("page"); pageStr != "" { // Используем page для удобства клиента
+        if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+            filters.Offset = (p - 1) * filters.Limit
+        }
+    }
+
+    sessions, totalCount, err := c.repo.SearchSessions(ctx.Request.Context(), filters)
+    if err != nil {
+        // Ошибка уже залогирована в репозитории
+        ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve sessions"})
+        return
+    }
+
+    // Возвращаем данные и метаданные для пагинации
+    ctx.JSON(http.StatusOK, gin.H{
+        "data": sessions,
+        "meta": gin.H{
+            "total_items": totalCount,
+            "per_page":    filters.Limit,
+            "current_page": (filters.Offset / filters.Limit) + 1,
+            "total_pages":  (totalCount + filters.Limit - 1) / filters.Limit, // Округление вверх
+        },
+    })
 }
+
 
 // GetByID handles GET /sessions/:id
 func (c *SessionController) GetByID(ctx *gin.Context) {

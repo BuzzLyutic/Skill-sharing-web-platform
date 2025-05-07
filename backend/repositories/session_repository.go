@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/BuzzLyutic/Skill-sharing-web-platform/models"
@@ -333,4 +334,111 @@ func (r *SessionRepository) GetSessionsStartingSoon(ctx context.Context, beforeT
         sessions = []models.Session{}
     }
     return sessions, nil
+}
+
+
+// SearchSessions выполняет поиск и фильтрацию сессий
+func (r *SessionRepository) SearchSessions(ctx context.Context, filters models.SessionSearchFilters) ([]models.Session, int, error) { // Возвращаем также общее количество
+    var sessions []models.Session
+    var totalCount int
+
+    // Базовый запрос
+    baseQuery := `
+        SELECT s.id, s.title, s.description, s.category, s.date_time, s.location, s.max_participants, s.creator_id, s.created_at, s.updated_at
+        -- Дополнительные поля, если нужны (например, количество участников, средний рейтинг сессии)
+        -- , COUNT(sp.user_id) as participant_count
+        -- , COALESCE(AVG(f.rating), 0) as average_session_rating
+        FROM sessions s
+        -- LEFT JOIN session_participants sp ON s.id = sp.session_id -- Если нужен participant_count
+        -- LEFT JOIN feedback f ON s.id = f.session_id             -- Если нужен average_session_rating
+    `
+    countQuery := `SELECT COUNT(DISTINCT s.id) FROM sessions s` // Для подсчета общего количества
+
+    var whereClauses []string
+    var args []interface{}
+    argID := 1
+
+    // --- Фильтры ---
+    if filters.Query != "" {
+        // Поиск по названию и описанию
+        // Используйте FTS (Full Text Search) в PostgreSQL для лучшей производительности на больших данных!
+        // Для простоты здесь LIKE
+        queryWords := strings.Fields(filters.Query)
+        for _, word := range queryWords {
+             whereClauses = append(whereClauses, fmt.Sprintf("(s.title ILIKE $%d OR s.description ILIKE $%d)", argID, argID+1))
+             args = append(args, "%"+word+"%", "%"+word+"%")
+             argID += 2
+        }
+    }
+    if filters.Category != "" {
+        whereClauses = append(whereClauses, fmt.Sprintf("s.category = $%d", argID))
+        args = append(args, filters.Category)
+        argID++
+    }
+    // TODO: Добавить фильтр по s.creator_id (если filters.CreatorID != nil)
+    // TODO: Добавить фильтр по s.location (если filters.Location != "")
+
+    if filters.DateFrom != nil {
+        whereClauses = append(whereClauses, fmt.Sprintf("s.date_time >= $%d", argID))
+        args = append(args, *filters.DateFrom)
+        argID++
+    }
+    if filters.DateTo != nil {
+        whereClauses = append(whereClauses, fmt.Sprintf("s.date_time <= $%d", argID))
+        args = append(args, *filters.DateTo)
+        argID++
+    }
+     if filters.ExcludePast { // По умолчанию true
+         whereClauses = append(whereClauses, "s.date_time > NOW()")
+     }
+
+    // Сборка WHERE
+    whereSQL := ""
+    if len(whereClauses) > 0 {
+        whereSQL = " WHERE " + strings.Join(whereClauses, " AND ")
+    }
+
+    // --- Сборка полного запроса для данных ---
+    finalQuery := baseQuery + whereSQL
+    // finalQuery += " GROUP BY s.id" // Если используете агрегатные функции (COUNT, AVG) в SELECT
+    finalQuery += " ORDER BY s.date_time ASC" // Или другой порядок
+
+    // Добавляем пагинацию к args для основного запроса
+    var pagedArgs []interface{}
+    pagedArgs = append(pagedArgs, args...) // Копируем аргументы для WHERE
+    if filters.Limit > 0 {
+        finalQuery += fmt.Sprintf(" LIMIT $%d", argID)
+        pagedArgs = append(pagedArgs, filters.Limit)
+        argID++
+    }
+    if filters.Offset > 0 {
+        finalQuery += fmt.Sprintf(" OFFSET $%d", argID)
+        pagedArgs = append(pagedArgs, filters.Offset)
+        argID++
+    }
+
+
+    // --- Выполнение запросов ---
+    // 1. Получение общего количества записей (для пагинации на клиенте)
+    err := r.db.GetContext(ctx, &totalCount, countQuery+whereSQL, args...) // Используем args без пагинации
+    if err != nil && !errors.Is(err, sql.ErrNoRows) {
+        log.Printf("ERROR counting sessions with filters: %v, query: %s, args: %v", err, countQuery+whereSQL, args)
+        return nil, 0, fmt.Errorf("%w: failed to count sessions: %v", ErrDatabase, err)
+    }
+    if errors.Is(err, sql.ErrNoRows) { // Если sql.ErrNoRows для COUNT, то totalCount будет 0
+         totalCount = 0
+    }
+
+
+    // 2. Получение самих сессий
+    err = r.db.SelectContext(ctx, &sessions, finalQuery, pagedArgs...)
+    if err != nil && !errors.Is(err, sql.ErrNoRows) {
+        log.Printf("ERROR searching sessions: %v, query: %s, args: %v", err, finalQuery, pagedArgs)
+        return nil, 0, fmt.Errorf("%w: failed to search sessions: %v", ErrDatabase, err)
+    }
+
+    if sessions == nil {
+        sessions = []models.Session{}
+    }
+    return sessions, totalCount, nil
 }

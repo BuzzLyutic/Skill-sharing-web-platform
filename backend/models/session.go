@@ -29,3 +29,21 @@ type SessionRequest struct {
 	Location        string    `json:"location" binding:"required"`
 	MaxParticipants int       `json:"max_participants" binding:"required,min=1"`
 }
+
+
+// SessionSearchFilters - структура для параметров поиска
+type SessionSearchFilters struct {
+    Query           string    // Поиск по title, description
+    Category        string
+    Skill           string    
+    DateFrom        *time.Time 
+    DateTo          *time.Time
+    MinRating       float64   // Для фильтрации по среднему рейтингу сессии (потребует JOIN с feedback или денормализации)
+    CreatorID       *uuid.UUID
+    Location        string
+    AvailableSlots  bool      // Только сессии, где есть свободные места
+    ExcludePast     bool      // Исключать прошедшие сессии (по умолчанию true)
+    // Пагинация
+    Limit           int
+    Offset          int
+}
