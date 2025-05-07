@@ -1,25 +1,32 @@
 package controllers
 
 import (
-        "errors"
-        "net/http"
-        "log"
-        "github.com/gin-gonic/gin"
-        "github.com/google/uuid"
-        "github.com/BuzzLyutic/Skill-sharing-web-platform/models"
-        "github.com/BuzzLyutic/Skill-sharing-web-platform/repositories"
-        "github.com/BuzzLyutic/Skill-sharing-web-platform/middleware"
+	"errors"
+	"fmt"
+	"log"
+	"net/http"
+
+	"github.com/BuzzLyutic/Skill-sharing-web-platform/middleware"
+	"github.com/BuzzLyutic/Skill-sharing-web-platform/models"
+	"github.com/BuzzLyutic/Skill-sharing-web-platform/repositories"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // SessionController handles session-related HTTP requests
 type SessionController struct {
 	repo *repositories.SessionRepository
-	// userRepo *repositories.UserRepository // Может понадобиться для получения User объекта
+	userRepo *repositories.UserRepository
+	notifRepo *repositories.NotificationRepository
 }
 
 // NewSessionController creates a new session controller
-func NewSessionController(repo *repositories.SessionRepository) *SessionController {
-	return &SessionController{repo: repo}
+func NewSessionController(
+	repo *repositories.SessionRepository,
+	userRepo *repositories.UserRepository,
+	notifRepo *repositories.NotificationRepository,
+	) *SessionController {
+	return &SessionController{repo: repo, notifRepo: notifRepo, userRepo: userRepo}
 }
 
 // getUserIDFromContext извлекает User ID из контекста Gin.
@@ -319,7 +326,27 @@ func (c *SessionController) JoinSession(ctx *gin.Context) {
         }
 		return
 	}
+	// Уведомление
+	session, errSession := c.repo.GetByID(requestContext, sessionID)
+	if errSession != nil { /* обработка ошибки */ }
 
+	joiningUser, errUser := c.userRepo.GetByID(requestContext, userID) // Нужен UserRepo в SessionController
+	if errUser != nil { /* обработка ошибки */ }
+
+	if session != nil && joiningUser != nil && session.CreatorID != userID { // Не уведомляем, если создатель сам "присоединился"
+    	notifMsg := fmt.Sprintf("User '%s' joined your session '%s'.", joiningUser.Name, session.Title)
+    	newNotif := models.Notification {
+        	UserID:      session.CreatorID,
+        	Message:     notifMsg,
+        	Type:        models.NotificationTypeNewParticipant,
+        	RelatedID:   &session.ID,
+        	RelatedType: "session",
+    	}
+    _, errNotif := c.notifRepo.CreateNotification(requestContext, newNotif)
+    if errNotif != nil {
+        log.Printf("WARN: Failed to create notification for new participant: %v", errNotif)
+    }
+	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Successfully joined the session"})
 }
 

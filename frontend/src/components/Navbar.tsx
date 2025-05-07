@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import Button from './Button'; // Предполагается, что Button создан
+import NotificationsDropdown from './NotificationsDropdown';
 
 const Navbar = () => {
   const { isAuthenticated, user, logout, isLoading } = useAuth();
@@ -19,6 +20,7 @@ const Navbar = () => {
             <div className="flex items-center space-x-4">
                <span className="hidden sm:inline">Welcome, {user?.name}!</span>
                <Link href="/profile" className="hover:text-gray-300">Profile</Link>
+               {isAuthenticated && <NotificationsDropdown />} 
                <Button onClick={logout} variant="secondary" size="sm">Logout</Button>
             </div>
           ) : (

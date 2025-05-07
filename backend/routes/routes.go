@@ -35,11 +35,13 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
         userRepo := repositories.NewUserRepository(db)
         sessionRepo := repositories.NewSessionRepository(db)
         feedbackRepo := repositories.NewFeedbackRepository(db)
+        notifRepo := repositories.NewNotificationRepository(db)
 
         // Initialize controllers
         userController := controllers.NewUserController(userRepo)
-        sessionController := controllers.NewSessionController(sessionRepo)
+        sessionController := controllers.NewSessionController(sessionRepo, userRepo, notifRepo)
         feedbackController := controllers.NewFeedbackController(feedbackRepo, sessionRepo)
+        notificationController := controllers.NewNotificationController(notifRepo)
     
         // Initialize auth handlers
         authHandler := handlers.NewAuthHandler(db, jwtCfg)
@@ -118,6 +120,14 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
 				    feedback.POST("", feedbackController.CreateFeedback)
 				    feedback.GET("", feedbackController.GetFeedback)
 			    }
+            }
+
+            // Notification routes
+            notifications := api.Group("/notifications")
+            {
+                notifications.GET("/unread", notificationController.GetMyUnreadNotifications)
+                notifications.POST("/:notification_id/read", notificationController.MarkAsRead)
+                notifications.POST("/read-all", notificationController.MarkAllAsRead)
             }
         }
     

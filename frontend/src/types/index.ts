@@ -89,3 +89,16 @@ export interface FeedbackFormData {
     rating: number | string; // Может быть строкой в форме
     comment: string;
 }
+
+export type NotificationType = 'new_participant' | 'session_reminder' | 'session_update' | string;
+
+export interface Notification {
+  id: UUID | string;
+  user_id: UUID | string;
+  message: string;
+  type: NotificationType;
+  is_read: boolean;
+  created_at: string; // ISO Date string
+  related_id?: UUID | string | null; 
+  related_type?: string | null;        
+}

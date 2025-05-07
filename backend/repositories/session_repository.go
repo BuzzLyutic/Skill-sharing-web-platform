@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"github.com/lib/pq"
+	"time"
+
 	"github.com/BuzzLyutic/Skill-sharing-web-platform/models"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 // Определим кастомные ошибки для лучшей обработки в контроллере
@@ -312,4 +314,23 @@ func (r *SessionRepository) GetGeneralRecommendedSessions(ctx context.Context, l
 		sessions = []models.Session{}
 	}
 	return sessions, nil
+}
+
+
+// GetSessionsStartingSoon получает сессии, начинающиеся до указанного времени
+func (r *SessionRepository) GetSessionsStartingSoon(ctx context.Context, beforeTime time.Time) ([]models.Session, error) {
+    sessions := []models.Session{}
+    query := `
+        SELECT * FROM sessions
+        WHERE date_time > NOW() AND date_time <= $1
+        ORDER BY date_time ASC`
+    err := r.db.SelectContext(ctx, &sessions, query, beforeTime)
+    if err != nil && !errors.Is(err, sql.ErrNoRows) {
+        log.Printf("ERROR getting sessions starting soon (before %v): %v", beforeTime, err)
+        return nil, fmt.Errorf("%w: failed to get sessions starting soon: %v", ErrDatabase, err)
+    }
+    if sessions == nil {
+        sessions = []models.Session{}
+    }
+    return sessions, nil
 }
