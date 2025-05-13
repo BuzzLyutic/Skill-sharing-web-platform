@@ -34,6 +34,8 @@ export default function SessionDetailPage() {
   const isParticipant = isAuthenticated && participants.some(p => p.id === user?.id);
   const canLeaveFeedback = isAuthenticated && isParticipant && !isCreator; // Добавить условие "сессия прошла"?
 
+  const [isDownloadingICS, setIsDownloadingICS] = useState(false);
+
   // --- Функция загрузки всех данных ---
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -152,6 +154,44 @@ export default function SessionDetailPage() {
    };
 
 
+  const handleDownloadICS = async () => {
+    if (!session) return;
+    setIsDownloadingICS(true);
+    setActionError(null);
+    try {
+        // apiClient добавит заголовок Authorization
+        const response = await apiClient.get(`/api/sessions/${session.id}/ics`, {
+            responseType: 'blob', // Важно для получения файла как Blob
+        });
+
+        // Создаем ссылку для скачивания
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        // Пытаемся получить имя файла из заголовка Content-Disposition
+        let filename = `session-${session.title.replace(/\s+/g, '_')}.ics`; // Дефолтное имя
+        const contentDisposition = response.headers['content-disposition'];
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+            if (filenameMatch && filenameMatch.length === 2) {
+                filename = filenameMatch[1];
+            }
+        }
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode?.removeChild(link);
+        window.URL.revokeObjectURL(url); // Очищаем URL объекта
+
+    } catch (err: any) {
+        console.error('Failed to download ICS:', err);
+        setActionError(err.response?.data?.error || 'Could not download calendar file.');
+    } finally {
+        setIsDownloadingICS(false);
+    }
+};
+
+
   // --- Рендеринг ---
   if (isLoading || authLoading) return <div>Loading session details...</div>;
   if (error) return <div className="text-red-500">Error: {error}</div>;
@@ -187,6 +227,17 @@ export default function SessionDetailPage() {
              <Button onClick={handleDelete} variant="destructive" disabled={isDeleting}>
                 {isDeleting ? 'Deleting...' : 'Delete Session'}
              </Button>
+        )}
+          {isAuthenticated && session && ( // Показывать только для авторизованных и если сессия загружена
+            <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-2"
+            onClick={handleDownloadICS}
+            disabled={isDownloadingICS}
+            >
+            {isDownloadingICS ? 'Downloading...' : 'Add to Calendar (.ics)'}
+            </Button>
         )}
       </div>
        {actionError && <p className="text-red-500 text-sm mb-4">{actionError}</p>}

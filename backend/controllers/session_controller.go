@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-
+	"github.com/arran4/golang-ical"
 	"github.com/BuzzLyutic/Skill-sharing-web-platform/middleware"
 	"github.com/BuzzLyutic/Skill-sharing-web-platform/models"
 	"github.com/BuzzLyutic/Skill-sharing-web-platform/repositories"
@@ -484,3 +484,60 @@ func (c *SessionController) GetRecommendedSessions(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, recommendedSessions)
 }
+
+
+// ExportSessionICS обрабатывает GET /api/sessions/:id/ics
+func (c *SessionController) ExportSessionICS(ctx *gin.Context) {
+    sessionIDStr := ctx.Param("id")
+    sessionID, err := uuid.Parse(sessionIDStr)
+    if err != nil {
+        ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session ID format"})
+        return
+    }
+
+    requestContext := ctx.Request.Context()
+    session, err := c.repo.GetByID(requestContext, sessionID)
+    if err != nil {
+        if errors.Is(err, repositories.ErrSessionNotFound) {
+            ctx.JSON(http.StatusNotFound, gin.H{"error": "Session not found"})
+        } else {
+            log.Printf("Error fetching session %s for ICS export: %v", sessionID, err)
+            ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve session data"})
+        }
+        return
+    }
+    if session == nil {
+         ctx.JSON(http.StatusNotFound, gin.H{"error": "Session not found"})
+         return
+    }
+
+
+    // --- Генерация ICS ---
+    cal := ics.NewCalendar()
+    cal.SetMethod(ics.MethodRequest) 
+
+    event := cal.AddEvent(session.ID.String()) // Уникальный ID для события
+    event.SetCreatedTime(session.CreatedAt)
+    event.SetDtStampTime(time.Now()) // Время создания ICS файла
+    event.SetModifiedAt(session.UpdatedAt)
+    event.SetStartAt(session.DateTime)
+
+    // Рассчитаем примерную длительность сессии (например, 1.5 часа)
+    // В реальном приложении у сессии должно быть поле duration или end_time
+    assumedDuration := 90 * time.Minute
+    event.SetEndAt(session.DateTime.Add(assumedDuration))
+
+    event.SetSummary(session.Title)
+    event.SetLocation(session.Location)
+    event.SetDescription(session.Description)
+    event.SetURL("http://localhost:3000/sessions/" + session.ID.String()) // Ссылка на сессию на сайте
+
+    // Установка заголовков для скачивания файла
+    ctx.Header("Content-Type", "text/calendar; charset=utf-8")
+    ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"session-%s.ics\"", session.Title))
+
+    // Отправка ICS данных
+    calString := cal.Serialize()
+    ctx.String(http.StatusOK, calString)
+}
+

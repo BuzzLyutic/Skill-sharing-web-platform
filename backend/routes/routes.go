@@ -109,7 +109,8 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
                 sessions.PUT("/:id", sessionController.Update)
                 sessions.DELETE("/:id", sessionController.Delete)
                 sessions.GET("/:id/participants", sessionController.GetParticipants)
-
+                sessions.GET("/:id/ics", sessionController.ExportSessionICS)
+                
                 // Endpoints для Join/Leave сессии
 			    sessions.POST("/:id/join", sessionController.JoinSession)
 			    sessions.POST("/:id/leave", sessionController.LeaveSession)
