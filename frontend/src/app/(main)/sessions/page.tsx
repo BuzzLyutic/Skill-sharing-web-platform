@@ -115,12 +115,19 @@ export default function SessionsPage() {
 
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-3xl font-bold">Skill Sharing Sessions</h1>
+    <div className="max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-600">
+          Skill Sharing Sessions
+        </h1>
         {isAuthenticated && (
           <Link href="/sessions/create">
-            <Button variant="default">Create New Session</Button>
+            <Button 
+              variant="default" 
+              className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+            >
+              Create New Session
+            </Button>
           </Link>
         )}
       </div>
@@ -131,44 +138,132 @@ export default function SessionsPage() {
         loading={loading}
       />
 
-      {loading && <div className="text-center py-10">Loading sessions...</div>}
-      {error && <div className="text-red-500 text-center py-10">Error: {error}</div>}
+      {loading && (
+        <div className="text-center py-16">
+          <div className="inline-block w-12 h-12 border-t-4 border-indigo-600 border-r-4 rounded-full animate-spin mb-4"></div>
+          <p className="text-indigo-700 font-medium">Loading sessions...</p>
+        </div>
+      )}
+      
+      {error && (
+        <div className="text-center py-10 px-4 bg-red-50 rounded-xl border border-red-200 text-red-700">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="font-medium">Error: {error}</p>
+        </div>
+      )}
+      
       {!loading && !error && sessions.length === 0 && (
-        <p className="text-center py-10 text-gray-600">No sessions found matching your criteria.</p>
+        <div className="text-center py-16 px-4 bg-indigo-50 rounded-xl border border-indigo-100">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-indigo-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-lg font-medium text-indigo-700 mb-2">No sessions found</p>
+          <p className="text-indigo-600">Try adjusting your filters or create a new session.</p>
+        </div>
       )}
 
       {!loading && !error && sessions.length > 0 && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
             {sessions.map((session) => (
-              <div key={session.id} className="border rounded-lg p-4 shadow hover:shadow-md transition-shadow flex flex-col justify-between">
-                <div>
-                    <h2 className="text-xl font-semibold mb-2 text-indigo-700">{session.title}</h2>
-                    <p className="text-gray-500 mb-1 text-xs">Category: {session.category}</p>
-                    <p className="text-gray-500 mb-1 text-xs">
-                        Date: {format(new Date(session.date_time), 'MMM d, yyyy HH:mm')}
-                    </p>
-                    <p className="text-gray-500 mb-3 text-xs">Location: {session.location}</p>
-                    <p className="text-gray-700 text-sm mb-3 line-clamp-3">{session.description}</p> {/* Ограничиваем описание */}
+              <div 
+                key={session.id} 
+                className="bg-white rounded-xl overflow-hidden border border-indigo-100 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full"
+              >
+                <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 py-2 px-4">
+                  <p className="text-xs font-medium text-indigo-100 uppercase tracking-wider">
+                    {session.category}
+                  </p>
                 </div>
-                <Link href={`/sessions/${session.id}`} className="mt-auto">
-                  <Button variant="outline" size="sm" className="w-full">View Details</Button>
-                </Link>
+                <div className="p-5 flex-1 flex flex-col">
+                  <h2 className="text-xl font-bold mb-3 text-gray-800 line-clamp-2">{session.title}</h2>
+                  <div className="mb-4 space-y-1 text-sm text-gray-600">
+                    <p className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {format(new Date(session.date_time), 'MMM d, yyyy HH:mm')}
+                    </p>
+                    <p className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {session.location}
+                    </p>
+                  </div>
+                  <p className="text-gray-700 text-sm mb-5 line-clamp-3 flex-grow">
+                    {session.description}
+                  </p>
+                  <Link href={`/sessions/${session.id}`} className="mt-auto">
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                    >
+                      View Details
+                    </Button>
+                  </Link>
+                </div>
               </div>
             ))}
           </div>
 
-          {/* Пагинация */}
           {meta && meta.total_pages > 1 && (
-            <div className="mt-8 flex justify-center items-center space-x-2">
-              <Button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage <= 1 || loading} size="sm">
+            <div className="mt-8 flex justify-center items-center space-x-2 pb-8">
+              <Button 
+                onClick={() => handlePageChange(currentPage - 1)} 
+                disabled={currentPage <= 1 || loading} 
+                size="sm"
+                variant="outline"
+                className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+              >
                 &laquo; Previous
               </Button>
-              {/* Можно добавить генерацию номеров страниц здесь */}
-              <span className="text-sm text-gray-700">
-                Page {meta.current_page} of {meta.total_pages}
-              </span>
-              <Button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage >= meta.total_pages || loading} size="sm">
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: meta.total_pages }, (_, i) => i + 1)
+                  .filter(page => {
+                    // Show first page, last page, current page, and pages around current
+                    return page === 1 || 
+                           page === meta.total_pages || 
+                           Math.abs(page - currentPage) <= 1;
+                  })
+                  .map((page, index, array) => {
+                    // Add ellipsis if there's a gap
+                    const showEllipsisBefore = index > 0 && array[index - 1] !== page - 1;
+                    const showEllipsisAfter = index < array.length - 1 && array[index + 1] !== page + 1;
+                    
+                    return (
+                      <React.Fragment key={page}>
+                        {showEllipsisBefore && (
+                          <span className="px-2 text-gray-500">...</span>
+                        )}
+                        <button
+                          onClick={() => handlePageChange(page)}
+                          className={`w-8 h-8 flex items-center justify-center rounded-md text-sm ${
+                            currentPage === page
+                              ? 'bg-indigo-600 text-white'
+                              : 'text-gray-700 hover:bg-indigo-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                        {showEllipsisAfter && (
+                          <span className="px-2 text-gray-500">...</span>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+              </div>
+              <Button 
+                onClick={() => handlePageChange(currentPage + 1)} 
+                disabled={currentPage >= meta.total_pages || loading} 
+                size="sm"
+                variant="outline"
+                className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+              >
                 Next &raquo;
               </Button>
             </div>

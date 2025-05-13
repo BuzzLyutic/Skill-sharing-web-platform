@@ -39,7 +39,14 @@ export default function RecommendedSessions({ title = "Recommended For You" }: R
 
   // Не рендерим ничего, если загрузка или ошибка, или нет сессий (чтобы не загромождать UI)
   if (loading) {
-    return <div className="my-8 text-center text-gray-500">Loading recommendations...</div>;
+    return (
+      <div className="my-8 text-center">
+        <div className="inline-block p-3 rounded-lg bg-indigo-50">
+          <div className="w-8 h-8 border-t-2 border-indigo-600 border-r-2 rounded-full animate-spin"></div>
+        </div>
+        <p className="mt-2 text-indigo-700">Loading recommendations...</p>
+      </div>
+    );
   }
 
   if (error || sessions.length === 0) {
@@ -49,24 +56,38 @@ export default function RecommendedSessions({ title = "Recommended For You" }: R
   }
 
   return (
-    <div className="my-8 p-6 bg-gray-100 rounded-lg shadow">
-      <h2 className="text-2xl font-semibold mb-4 text-gray-800">{title}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {sessions.map((session) => (
-          <div key={session.id} className="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
-            <h3 className="text-lg font-semibold mb-1 text-indigo-700">{session.title}</h3>
-            <p className="text-gray-500 mb-1 text-xs">Category: {session.category}</p>
-            <p className="text-gray-500 mb-2 text-xs">
-              Date: {format(new Date(session.date_time), 'MMM d, yyyy p')}
-            </p>
-            {/* <p className="text-gray-700 text-sm mb-3">{session.description.substring(0, 70)}{session.description.length > 70 ? '...' : ''}</p> */}
-            <Link href={`/sessions/${session.id}`}>
-              <Button variant="link" size="sm" className="text-indigo-600 hover:text-indigo-800 p-0">
-                View Details &rarr;
-              </Button>
-            </Link>
-          </div>
-        ))}
+    <div className="my-12 rounded-xl overflow-hidden bg-gradient-to-br from-indigo-50 to-blue-50 shadow-lg">
+      <div className="bg-indigo-600 py-4 px-6">
+        <h2 className="text-2xl font-bold text-white">{title}</h2>
+      </div>
+      <div className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {sessions.map((session) => (
+            <div 
+              key={session.id} 
+              className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-all duration-300 border border-indigo-100 flex flex-col"
+            >
+              <div className="flex-1">
+                <div className="text-xs font-medium text-indigo-600 mb-2 uppercase tracking-wider">
+                  {session.category}
+                </div>
+                <h3 className="text-lg font-bold mb-2 text-gray-800 line-clamp-2">{session.title}</h3>
+                <p className="text-gray-600 mb-3 text-sm">
+                  {format(new Date(session.date_time), 'MMM d, yyyy p')}
+                </p>
+              </div>
+              <Link href={`/sessions/${session.id}`}>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  View Details
+                </Button>
+              </Link>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

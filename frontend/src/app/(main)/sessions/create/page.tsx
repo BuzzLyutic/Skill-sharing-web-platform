@@ -76,56 +76,163 @@ export default function CreateSessionPage() {
   };
 
    if (authLoading) {
-        return <div>Loading...</div>;
-   }
+        return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <div className="text-center">
+          <div className="inline-block w-10 h-10 border-t-4 border-indigo-600 border-r-4 rounded-full animate-spin mb-4"></div>
+          <p className="text-indigo-700 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Create a New Session</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium">Title*</label>
-          <Input type="text" name="title" id="title" value={formData.title} onChange={handleChange} required />
+      <div className="mb-8 text-center">
+        <h1 className="text-3xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-600">
+          Create a New Session
+        </h1>
+        <p className="text-gray-600">Share your knowledge and skills with the community</p>
+      </div>
+      
+      <div className="bg-white rounded-xl shadow-md border border-indigo-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 py-4 px-6">
+          <h2 className="text-xl font-semibold text-white">Session Details</h2>
         </div>
-         <div>
-          <label htmlFor="category" className="block text-sm font-medium">Category*</label>
-          {/* Лучше использовать Select, если категории предопределены */}
-          <Input type="text" name="category" id="category" value={formData.category} onChange={handleChange} required />
-        </div>
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium">Description</label>
-          <textarea name="description" id="description" value={formData.description} onChange={handleChange} rows={4} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"/>
-        </div>
-        <div>
-            <label htmlFor="date_time" className="block text-sm font-medium">Date & Time*</label>
-            <DatePicker
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div className="space-y-2">
+            <label htmlFor="title" className="block text-sm font-medium text-indigo-800">
+              Title*
+            </label>
+            <Input 
+              type="text" 
+              name="title" 
+              id="title" 
+              value={formData.title} 
+              onChange={handleChange} 
+              required 
+              className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+              placeholder="Enter a descriptive title for your session"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="category" className="block text-sm font-medium text-indigo-800">
+              Category*
+            </label>
+            <Input 
+              type="text" 
+              name="category" 
+              id="category" 
+              value={formData.category} 
+              onChange={handleChange} 
+              required 
+              className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+              placeholder="e.g., Programming, Design, Marketing"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="description" className="block text-sm font-medium text-indigo-800">
+              Description
+            </label>
+            <textarea 
+              name="description" 
+              id="description" 
+              value={formData.description} 
+              onChange={handleChange} 
+              rows={4} 
+              className="w-full rounded-lg border border-indigo-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 text-sm"
+              placeholder="Describe what participants will learn and what to expect"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <label htmlFor="date_time" className="block text-sm font-medium text-indigo-800">
+                Date & Time*
+              </label>
+              <DatePicker
                 selected={formData.date_time}
                 onChange={handleDateChange}
                 showTimeSelect
                 timeFormat="HH:mm"
                 timeIntervals={15}
                 dateFormat="MMMM d, yyyy h:mm aa"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                className="w-full rounded-lg border border-indigo-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 text-sm"
                 placeholderText="Select date and time"
-                minDate={new Date()} // Запрещаем выбирать прошлые даты
+                minDate={new Date()}
                 required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="location" className="block text-sm font-medium text-indigo-800">
+                Location*
+              </label>
+              <Input 
+                type="text" 
+                name="location" 
+                id="location" 
+                value={formData.location} 
+                onChange={handleChange} 
+                required 
+                className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+                placeholder="e.g., Online, Room 101, Conference Hall"
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="max_participants" className="block text-sm font-medium text-indigo-800">
+              Max Participants*
+            </label>
+            <Input 
+              type="number" 
+              name="max_participants" 
+              id="max_participants" 
+              value={formData.max_participants} 
+              onChange={handleChange} 
+              min="1" 
+              required 
+              className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+              placeholder="Enter maximum number of participants"
             />
-        </div>
-         <div>
-          <label htmlFor="location" className="block text-sm font-medium">Location*</label>
-          <Input type="text" name="location" id="location" value={formData.location} onChange={handleChange} required />
-        </div>
-         <div>
-          <label htmlFor="max_participants" className="block text-sm font-medium">Max Participants*</label>
-          <Input type="number" name="max_participants" id="max_participants" value={formData.max_participants} onChange={handleChange} min="1" required />
-        </div>
+          </div>
 
-        {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
 
-        <Button type="submit" disabled={submitting} className="w-full">
-          {submitting ? 'Creating...' : 'Create Session'}
-        </Button>
-      </form>
+          <div className="flex flex-col sm:flex-row gap-3 pt-3">
+            <Button 
+              type="submit" 
+              disabled={submitting} 
+              className="bg-indigo-600 hover:bg-indigo-700 text-white flex-1"
+            >
+              {submitting ? (
+                <>
+                  <span className="inline-block w-4 h-4 border-t-2 border-white border-r-2 rounded-full animate-spin mr-2"></span>
+                  Creating...
+                </>
+              ) : 'Create Session'}
+            </Button>
+            
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => router.push('/sessions')} 
+              disabled={submitting}
+              className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

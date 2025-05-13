@@ -117,34 +117,177 @@ export default function EditSessionPage() {
   };
 
   if (initialLoading || authLoading) {
-    return <div>Loading editor...</div>;
+    return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <div className="text-center">
+          <div className="inline-block w-10 h-10 border-t-4 border-indigo-600 border-r-4 rounded-full animate-spin mb-4"></div>
+          <p className="text-indigo-700 font-medium">Loading session data...</p>
+        </div>
+      </div>
+    );
   }
+
    if (error && !formData.title) { // Показываем ошибку загрузки, если форма еще не заполнена
-       return <div className="text-red-500">Error: {error}</div>;
-   }
+      return (
+      <div className="max-w-2xl mx-auto text-center py-12 px-4">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h2 className="text-xl font-bold text-red-700 mb-2">Error</h2>
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button 
+            onClick={() => router.push('/sessions')} 
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            Back to Sessions
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-  return (
+return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Edit Session</h1>
-      {/* Копируем форму со страницы создания, она будет предзаполнена */}
-       <form onSubmit={handleSubmit} className="space-y-4">
-         {/* ... поля формы (Input, DatePicker, Textarea) как в CreateSessionPage ... */}
-          <div><label>Title*</label><Input type="text" name="title" value={formData.title} onChange={handleChange} required /></div>
-          <div><label>Category*</label><Input type="text" name="category" value={formData.category} onChange={handleChange} required /></div>
-          <div><label>Description</label><textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"/></div>
-          <div><label>Date & Time*</label><DatePicker selected={formData.date_time} onChange={handleDateChange} showTimeSelect timeFormat="HH:mm" timeIntervals={15} dateFormat="MMMM d, yyyy h:mm aa" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2" placeholderText="Select date and time" minDate={new Date()} required/> </div>
-          <div><label>Location*</label><Input type="text" name="location" value={formData.location} onChange={handleChange} required /></div>
-          <div><label>Max Participants*</label><Input type="number" name="max_participants" value={formData.max_participants} onChange={handleChange} min="1" required /></div>
+      <div className="mb-8 text-center">
+        <h1 className="text-3xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-600">
+          Edit Session
+        </h1>
+        <p className="text-gray-600">Update your session details</p>
+      </div>
+      
+      <div className="bg-white rounded-xl shadow-md border border-indigo-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 py-4 px-6">
+          <h2 className="text-xl font-semibold text-white">Session Details</h2>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div className="space-y-2">
+            <label htmlFor="title" className="block text-sm font-medium text-indigo-800">
+              Title*
+            </label>
+            <Input 
+              type="text" 
+              name="title" 
+              id="title" 
+              value={formData.title} 
+              onChange={handleChange} 
+              required 
+              className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="category" className="block text-sm font-medium text-indigo-800">
+              Category*
+            </label>
+            <Input 
+              type="text" 
+              name="category" 
+              id="category" 
+              value={formData.category} 
+              onChange={handleChange} 
+              required 
+              className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="description" className="block text-sm font-medium text-indigo-800">
+              Description
+            </label>
+            <textarea 
+              name="description" 
+              id="description" 
+              value={formData.description} 
+              onChange={handleChange} 
+              rows={4} 
+              className="w-full rounded-lg border border-indigo-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 text-sm"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <label htmlFor="date_time" className="block text-sm font-medium text-indigo-800">
+                Date & Time*
+              </label>
+              <DatePicker
+                selected={formData.date_time}
+                onChange={handleDateChange}
+                showTimeSelect
+                timeFormat="HH:mm"
+                timeIntervals={15}
+                dateFormat="MMMM d, yyyy h:mm aa"
+                className="w-full rounded-lg border border-indigo-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 text-sm"
+                minDate={new Date()}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="location" className="block text-sm font-medium text-indigo-800">
+                Location*
+              </label>
+              <Input 
+                type="text" 
+                name="location" 
+                id="location" 
+                value={formData.location} 
+                onChange={handleChange} 
+                required 
+                className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="max_participants" className="block text-sm font-medium text-indigo-800">
+              Max Participants*
+            </label>
+            <Input 
+              type="number" 
+              name="max_participants" 
+              id="max_participants" 
+              value={formData.max_participants} 
+              onChange={handleChange} 
+              min="1" 
+              required 
+              className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+            />
+          </div>
 
-        {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
 
-        <Button type="submit" disabled={submitting} className="w-full">
-          {submitting ? 'Saving Changes...' : 'Save Changes'}
-        </Button>
-         <Button type="button" variant="outline" onClick={() => router.back()} disabled={submitting}>
-            Cancel
-        </Button>
-      </form>
+          <div className="flex flex-col sm:flex-row gap-3 pt-3">
+            <Button 
+              type="submit" 
+              disabled={submitting} 
+              className="bg-indigo-600 hover:bg-indigo-700 text-white flex-1"
+            >
+              {submitting ? (
+                <>
+                  <span className="inline-block w-4 h-4 border-t-2 border-white border-r-2 rounded-full animate-spin mr-2"></span>
+                  Saving Changes...
+                </>
+              ) : 'Save Changes'}
+            </Button>
+            
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => router.back()} 
+              disabled={submitting}
+              className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

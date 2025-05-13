@@ -37,43 +37,139 @@ export default function RegisterPage() {
     }
   };
 
-  return (
-    <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-6 text-center">Register</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">Name</label>
-          <Input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1" />
+ return (
+    <div className="max-w-md mx-auto py-12 px-4 sm:px-0">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-600">
+          Create Your Account
+        </h1>
+        <p className="text-gray-600">Join our community and start sharing your skills</p>
+      </div>
+      
+      <div className="bg-white rounded-xl shadow-md border border-indigo-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 py-4 px-6">
+          <h2 className="text-xl font-semibold text-white">Registration Form</h2>
         </div>
-         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-          <Input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1" />
-        </div>
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-          <Input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="mt-1" />
-        </div>
-         <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">Confirm Password</label>
-          <Input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} className="mt-1" />
-        </div>
-         <div>
-          <label htmlFor="bio" className="block text-sm font-medium text-gray-700">Bio (Optional)</label>
-          <textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} rows={3} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
-        </div>
-         <div>
-          <label htmlFor="skills" className="block text-sm font-medium text-gray-700">Skills (comma-separated, e.g. Go,React,SQL)</label>
-          <Input type="text" id="skills" value={skills} onChange={(e) => setSkills(e.target.value)} className="mt-1" />
-        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div className="space-y-2">
+            <label htmlFor="name" className="block text-sm font-medium text-indigo-800">
+              Name*
+            </label>
+            <Input 
+              type="text" 
+              id="name" 
+              value={name} 
+              onChange={(e) => setName(e.target.value)} 
+              required 
+              className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+              placeholder="Your full name"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="email" className="block text-sm font-medium text-indigo-800">
+              Email*
+            </label>
+            <Input 
+              type="email" 
+              id="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              required 
+              className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+              placeholder="your.email@example.com"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <label htmlFor="password" className="block text-sm font-medium text-indigo-800">
+                Password*
+              </label>
+              <Input 
+                type="password" 
+                id="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                required 
+                minLength={6} 
+                className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+                placeholder="Min. 6 characters"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-indigo-800">
+                Confirm Password*
+              </label>
+              <Input 
+                type="password" 
+                id="confirmPassword" 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                required 
+                minLength={6} 
+                className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+                placeholder="Repeat password"
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="bio" className="block text-sm font-medium text-indigo-800">
+              Bio (Optional)
+            </label>
+            <textarea 
+              id="bio" 
+              value={bio} 
+              onChange={(e) => setBio(e.target.value)} 
+              rows={3} 
+              className="w-full rounded-lg border border-indigo-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 text-sm"
+              placeholder="Tell us a bit about yourself"
+            ></textarea>
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="skills" className="block text-sm font-medium text-indigo-800">
+              Skills (comma-separated)
+            </label>
+            <Input 
+              type="text" 
+              id="skills" 
+              value={skills} 
+              onChange={(e) => setSkills(e.target.value)} 
+              className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+              placeholder="e.g., Go, React, SQL, Design"
+            />
+          </div>
 
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        <Button type="submit" disabled={isLoading} className="w-full">
-          {isLoading ? 'Registering...' : 'Register'}
-        </Button>
-      </form>
-       <p className="mt-6 text-center text-sm">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+
+          <Button 
+            type="submit" 
+            disabled={isLoading} 
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            {isLoading ? (
+              <>
+                <span className="inline-block w-4 h-4 border-t-2 border-white border-r-2 rounded-full animate-spin mr-2"></span>
+                Registering...
+              </>
+            ) : 'Create Account'}
+          </Button>
+        </form>
+      </div>
+      
+      <p className="mt-6 text-center text-gray-600">
         Already have an account?{' '}
-        <Link href="/login" className="text-blue-600 hover:underline">Login here</Link>
+        <Link href="/login" className="text-indigo-600 hover:text-indigo-800 font-medium">
+          Log in here
+        </Link>
       </p>
     </div>
   );
