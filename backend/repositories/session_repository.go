@@ -359,6 +359,17 @@ func (r *SessionRepository) SearchSessions(ctx context.Context, filters models.S
     argID := 1
 
     // --- Фильтры ---
+	// --- Creator ID Filter (for "My Sessions") ---
+    if filters.CreatorID != nil && *filters.CreatorID != uuid.Nil {
+        whereClauses = append(whereClauses, fmt.Sprintf("s.creator_id = $%d", argID))
+        args = append(args, *filters.CreatorID)
+        argID++
+        log.Printf("SearchSessions: Filtering by CreatorID: %s", (*filters.CreatorID).String())
+    } else {
+         // This log is useful when debugging why a filter might not be applied
+        // log.Println("SearchSessions: Not filtering by CreatorID (CreatorID is nil or Nil UUID in filters)")
+    }
+
     if filters.Query != "" {
         // Поиск по названию и описанию
         // Используйте FTS (Full Text Search) в PostgreSQL для лучшей производительности на больших данных!
@@ -439,6 +450,69 @@ func (r *SessionRepository) SearchSessions(ctx context.Context, filters models.S
 
     if sessions == nil {
         sessions = []models.Session{}
+    }
+    return sessions, totalCount, nil
+}
+
+
+// GetJoinedSessionsByUserID retrieves all sessions a user has joined
+func (r *SessionRepository) GetJoinedSessionsByUserID(ctx context.Context, userID uuid.UUID, filters models.SessionSearchFilters) ([]models.Session, int, error) {
+    var sessions []models.Session
+    var totalCount int
+
+    baseQuery := `
+        SELECT s.*
+        FROM sessions s
+        JOIN session_participants sp ON s.id = sp.session_id
+    `
+    countBaseQuery := `
+        SELECT COUNT(DISTINCT s.id)
+        FROM sessions s
+        JOIN session_participants sp ON s.id = sp.session_id
+    `
+    conditions := []string{"sp.user_id = $1"}
+    args := []interface{}{userID}
+    argId := 2 // Start next arg index at 2
+
+    // Apply other filters from SessionSearchFilters if needed (category, date, etc.)
+    if filters.Category != "" {
+        conditions = append(conditions, fmt.Sprintf("s.category = $%d", argId))
+        args = append(args, filters.Category)
+        argId++
+    }
+    if filters.ExcludePast {
+        conditions = append(conditions, fmt.Sprintf("s.date_time >= $%d", argId))
+        args = append(args, time.Now()) // Or use UTC depending on your db timezone
+        argId++
+    }
+    // ... add other filters ...
+
+    whereClause := ""
+    if len(conditions) > 0 {
+        whereClause = " WHERE " + strings.Join(conditions, " AND ")
+    }
+
+    // Count query
+    finalCountQuery := countBaseQuery + whereClause
+    err := r.db.GetContext(ctx, &totalCount, finalCountQuery, args...)
+    if err != nil {
+        log.Printf("Error counting joined sessions for user %s: %v", userID, err)
+        return nil, 0, fmt.Errorf("%w: failed to count joined sessions: %v", ErrDatabase, err)
+    }
+
+    // Data query
+    orderBy := " ORDER BY s.date_time DESC" // Or other preferred order
+    limitOffset := fmt.Sprintf(" LIMIT $%d OFFSET $%d", argId, argId+1)
+    args = append(args, filters.Limit, filters.Offset)
+
+    finalQuery := baseQuery + whereClause + orderBy + limitOffset
+    err = r.db.SelectContext(ctx, &sessions, finalQuery, args...)
+    if err != nil {
+        if errors.Is(err, sql.ErrNoRows) {
+            return []models.Session{}, 0, nil // No sessions joined is not an error
+        }
+        log.Printf("Error fetching joined sessions for user %s: %v", userID, err)
+        return nil, 0, fmt.Errorf("%w: failed to get joined sessions: %v", ErrDatabase, err)
     }
     return sessions, totalCount, nil
 }

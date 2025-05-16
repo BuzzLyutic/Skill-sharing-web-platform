@@ -73,6 +73,8 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
                 users.GET("/:id", userController.GetByID)
                 // Профиль текущего пользователя
                 users.GET("/me", authHandler.GetMe)
+                users.PUT("/me", userController.UpdateMe)
+                users.PUT("/me/password", userController.ChangePassword)
             }
 
             // --- Admin Routes ---
@@ -102,8 +104,10 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
             // Session routes
             sessions := api.Group("/sessions")
             {
+                sessions.GET("/my", sessionController.GetMySessions)
                 sessions.GET("", sessionController.GetAll)
                 sessions.GET("/recommended", sessionController.GetRecommendedSessions)
+                sessions.GET("/joined", sessionController.GetJoinedSessions)
                 sessions.GET("/:id", sessionController.GetByID)
                 sessions.POST("", sessionController.Create)
                 sessions.PUT("/:id", sessionController.Update)

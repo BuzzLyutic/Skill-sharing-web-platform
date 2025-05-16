@@ -286,3 +286,35 @@ func (r *UserRepository) UpdateUserRole(ctx context.Context, userID uuid.UUID, n
 	}
 	return nil
 }
+
+
+// Helper to get user with password hash (if not already available or to ensure fresh data)
+func (r *UserRepository) GetByIDWithPassword(ctx context.Context, id uuid.UUID) (*models.User, error) {
+    var user models.User
+    query := `SELECT * FROM users WHERE id = $1` // Selects all, including password_hash
+    err := r.db.GetContext(ctx, &user, query, id)
+    if err != nil {
+        if errors.Is(err, sql.ErrNoRows) {
+            return nil, ErrUserNotFound
+        }
+        log.Printf("ERROR getting user by ID (with password) %s: %v", id, err)
+        return nil, fmt.Errorf("%w: failed to get user by id %s: %v", ErrDatabase, id, err)
+    }
+    return &user, nil
+}
+
+// UpdatePassword updates a user's password_hash.
+// It assumes current password has already been verified by the caller (controller/service).
+func (r *UserRepository) UpdatePassword(ctx context.Context, userID uuid.UUID, newPasswordHash string) error {
+    query := `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`
+    result, err := r.db.ExecContext(ctx, query, newPasswordHash, userID)
+    if err != nil {
+        log.Printf("ERROR updating password for user %s: %v", userID, err)
+        return fmt.Errorf("%w: failed to update password for user %s: %v", ErrDatabase, userID, err)
+    }
+    rowsAffected, _ := result.RowsAffected()
+    if rowsAffected == 0 {
+        return ErrUserNotFound // Should not happen if userID is from a valid token
+    }
+    return nil
+}

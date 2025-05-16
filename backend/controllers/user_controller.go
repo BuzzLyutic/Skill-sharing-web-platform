@@ -11,6 +11,8 @@ import (
 	"github.com/BuzzLyutic/Skill-sharing-web-platform/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+        "golang.org/x/crypto/bcrypt"
+        
 )
 
 // UserController handles user-related HTTP requests
@@ -28,13 +30,24 @@ func NewUserController(repo *repositories.UserRepository) *UserController {
 func getUserRoleFromContext(ctx *gin.Context) (models.Role, bool) {
         // ... (реализация из предыдущего ответа) ...
         roleValue, exists := ctx.Get(middleware.ContextRoleKey)
-        if !exists { return "", false }
+        if !exists {
+        log.Println("getUserRoleFromContext: Role not found in context")
+        return "", false
+        }   
         roleStr, ok := roleValue.(string)
-        if !ok { return "", false }
+        if !ok {
+        log.Println("getUserRoleFromContext: Role in context is not a string")
+        return "", false
+        }
         role := models.Role(roleStr)
+        if !models.IsValidRole(role) {
+        log.Printf("getUserRoleFromContext: Invalid role in context: %s", roleStr)
+        return "", false
+        }
         if !models.IsValidRole(role){ return "", false }
         return role, true
 }
+
 
 // GetAll handles GET /api/admin/users (только для админа)
 func (c *UserController) GetAll(ctx *gin.Context) {
@@ -238,3 +251,102 @@ func (c *UserController) UpdateUserRole(ctx *gin.Context) {
             ctx.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("User %s role updated to %s successfully", targetUserID, req.Role)})
 }
 
+
+// UpdateMe handles PUT /api/users/me (for the authenticated user to update their own profile)
+func (c *UserController) UpdateMe(ctx *gin.Context) {
+    currentUserID, ok := getUserIDFromContext(ctx)
+    if !ok {
+        ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: User identification failed"})
+        return
+    }
+
+    var req models.UserRequest // Reusing UserRequest, ensure frontend sends only name, bio, skills
+    if err := ctx.ShouldBindJSON(&req); err != nil {
+        log.Printf("UpdateMe: Failed to bind JSON for user %s: %v", currentUserID, err)
+        ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+        return
+    }
+
+    // The repository's Update method is designed to only update specific fields (name, bio, skills)
+    // So, even if other fields were in UserRequest, they wouldn't be updated by this call.
+    updatedUser, err := c.repo.Update(ctx.Request.Context(), currentUserID, req)
+    if err != nil {
+        if errors.Is(err, repositories.ErrUserNotFound) {
+            ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        } else {
+            log.Printf("UpdateMe: Error updating user %s: %v", currentUserID, err)
+            ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+        }
+        return
+    }
+
+    if updatedUser == nil {
+        ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found after update attempt"})
+        return
+    }
+    ctx.JSON(http.StatusOK, updatedUser)
+}
+
+
+// ChangePassword handles PUT /api/users/me/password
+func (c *UserController) ChangePassword(ctx *gin.Context) {
+    currentUserID, ok := getUserIDFromContext(ctx) // Make sure this helper is available and correct
+    if !ok {
+        ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: User identification failed"})
+        return
+    }
+
+    var req models.PasswordChangeRequest
+    if err := ctx.ShouldBindJSON(&req); err != nil {
+        log.Printf("ChangePassword: Failed to bind JSON for user %s: %v", currentUserID, err)
+        ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+        return
+    }
+
+    // 1. Fetch the user with their current password hash
+    //    It's important to fetch fresh data to avoid stale reads.
+    user, err := c.repo.GetByIDWithPassword(ctx.Request.Context(), currentUserID)
+    if err != nil {
+        if errors.Is(err, repositories.ErrUserNotFound) {
+            ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        } else {
+            log.Printf("ChangePassword: Error fetching user %s: %v", currentUserID, err)
+            ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process request"})
+        }
+        return
+    }
+
+    if user.PasswordHash == nil || *user.PasswordHash == "" {
+        // This case might happen for users who signed up via OAuth and never set a password
+        log.Printf("ChangePassword: User %s has no password set (possibly OAuth user).", currentUserID)
+        ctx.JSON(http.StatusBadRequest, gin.H{"error": "Password not set for this account. Cannot change."})
+        return
+    }
+
+    // 2. Verify current password
+    err = bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(req.CurrentPassword))
+    if err != nil {
+        log.Printf("ChangePassword: Invalid current password for user %s", currentUserID)
+        ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid current password"})
+        return
+    }
+
+    // 3. Hash the new password
+    newPasswordHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+    if err != nil {
+        log.Printf("ChangePassword: Error hashing new password for user %s: %v", currentUserID, err)
+        ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process new password"})
+        return
+    }
+
+    // 4. Update the password in the repository
+    err = c.repo.UpdatePassword(ctx.Request.Context(), currentUserID, string(newPasswordHash))
+    if err != nil {
+        // Error already logged in repository
+        ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
+        return
+    }
+
+    log.Printf("User %s successfully changed their password.", currentUserID)
+    ctx.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
+}

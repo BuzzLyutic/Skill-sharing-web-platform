@@ -8,7 +8,7 @@ export default function HomePage() {
     <div className="max-w-5xl mx-auto">
       <div className="py-16 px-4 sm:px-6 lg:px-8 text-center">
         <div className="mb-16">
-          <h1 className="text-5xl font-extrabold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-600">
+          <h1 className="text-5xl font-extrabold mb-6 pb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-600">
             Welcome to the Skill Sharing Platform!
           </h1>
           <p className="mb-10 text-xl text-gray-600 max-w-2xl mx-auto">

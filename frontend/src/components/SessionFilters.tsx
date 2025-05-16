@@ -112,7 +112,7 @@ export default function SessionFilters({ initialFilters = {}, onFilterChange, lo
             name="date_from"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+            className="bg-white border-indigo-200 focus-visible:ring-indigo-500 sm:text-sm text-gray-900"
           />
         </div>
 
@@ -126,7 +126,7 @@ export default function SessionFilters({ initialFilters = {}, onFilterChange, lo
             name="date_to"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+            className="bg-white border-indigo-200 focus-visible:ring-indigo-500 sm:text-sm text-gray-900"
           />
         </div>
 

@@ -541,3 +541,128 @@ func (c *SessionController) ExportSessionICS(ctx *gin.Context) {
     ctx.String(http.StatusOK, calString)
 }
 
+
+// GetMySessions handles GET /api/sessions/my (sessions created by the logged-in user)
+func (c *SessionController) GetMySessions(ctx *gin.Context) {
+    userID, ok := getUserIDFromContext(ctx) // Ensure this helper is robust
+    if !ok {
+        ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: User identification failed"})
+        return
+    }
+
+    var filters models.SessionSearchFilters
+    // Set default pagination and other potential filters from query params if needed
+    filters.Limit = 10 // Default limit
+    filters.Offset = 0
+    filters.ExcludePast = false // For "my sessions", user might want to see past ones too
+
+    if limitStr := ctx.Query("limit"); limitStr != "" {
+        if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+            filters.Limit = l
+        }
+    }
+    if pageStr := ctx.Query("page"); pageStr != "" {
+        if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+            filters.Offset = (p - 1) * filters.Limit
+        }
+    }
+     if excludePastQuery := ctx.Query("exclude_past"); excludePastQuery != "" {
+        if excludePastQuery == "true" { // Only if explicitly set to true
+            filters.ExcludePast = true
+        }
+    }
+
+    filters.CreatorID = &userID // <<<--- THIS IS THE KEY PART
+
+	if excludePastQuery := ctx.Query("exclude_past"); excludePastQuery == "false" {
+         filters.ExcludePast = false
+    } else {
+         filters.ExcludePast = true // Default to excluding past unless "false" is specified
+    }
+    // Add parsing for other filters if you want to support them on "my sessions" (e.g., category)
+    // filters.Category = ctx.Query("category")
+
+    sessions, totalCount, err := c.repo.SearchSessions(ctx.Request.Context(), filters)
+    if err != nil {
+        // Error already logged in repository
+        ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve your sessions"})
+        return
+    }
+
+	log.Printf("GetMySessions: Found %d sessions for userID: %s. Total items: %d", len(sessions), userID.String(), totalCount)
+
+    ctx.JSON(http.StatusOK, gin.H{
+        "data": sessions,
+        "meta": gin.H{
+            "total_items": totalCount,
+            "per_page":    filters.Limit,
+            "current_page": (filters.Offset / filters.Limit) + 1,
+            "total_pages":  (totalCount + filters.Limit - 1) / filters.Limit,
+        },
+    })
+}
+
+
+// GetJoinedSessions handles GET /api/sessions/joined (sessions joined by the logged-in user)
+func (c *SessionController) GetJoinedSessions(ctx *gin.Context) {
+    userID, ok := getUserIDFromContext(ctx)
+    if !ok {
+        ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: User identification failed"})
+        return
+    }
+
+    var filters models.SessionSearchFilters
+    // --- Pagination ---
+	limitStr := ctx.DefaultQuery("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		log.Printf("GetJoinedSessions: Invalid or missing limit query param '%s', defaulting to 10. Error: %v", limitStr, err)
+		limit = 10 // Default limit if parsing fails or value is invalid
+	}
+	filters.Limit = limit
+
+	pageStr := ctx.DefaultQuery("page", "1")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page <= 0 {
+		log.Printf("GetJoinedSessions: Invalid or missing page query param '%s', defaulting to 1. Error: %v", pageStr, err)
+		page = 1 // Default page if parsing fails or value is invalid
+	}
+	filters.Offset = (page - 1) * filters.Limit // Calculate offset
+
+	// --- Other Optional Filters (example: exclude_past) ---
+	// By default, let's say we don't exclude past joined sessions unless specified
+	if excludePastQuery := ctx.Query("exclude_past"); excludePastQuery == "true" {
+		filters.ExcludePast = true
+	} else {
+		filters.ExcludePast = false
+	}
+
+	log.Printf("GetJoinedSessions: Applying filters: %+v for userID: %s", filters, userID.String())
+
+	// Call the repository method
+	sessions, totalCount, err := c.repo.GetJoinedSessionsByUserID(ctx.Request.Context(), userID, filters)
+	if err != nil {
+		log.Printf("GetJoinedSessions: Error from GetJoinedSessionsByUserID for userID %s: %v", userID, err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve joined sessions"})
+		return
+	}
+
+	log.Printf("GetJoinedSessions: Found %d joined sessions for userID: %s. Total items: %d", len(sessions), userID.String(), totalCount)
+
+	// Calculate total_pages, ensuring no division by zero if limit is somehow 0
+	totalPages := 0
+	if filters.Limit > 0 {
+		totalPages = (totalCount + filters.Limit - 1) / filters.Limit
+	}
+
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"data": sessions,
+		"meta": gin.H{
+			"total_items":  totalCount,
+			"per_page":     filters.Limit,
+			"current_page": page, // Return the page number requested
+			"total_pages":  totalPages,
+		},
+	})
+}

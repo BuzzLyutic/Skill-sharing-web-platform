@@ -25,7 +25,7 @@ type User struct {
 
 // UserRequest for creating/updating users
 type UserRequest struct {
-	Email    string   `json:"email" binding:"required,email"`
+	Email    string   `json:"email,omitempty" binding:"omitempty,email"`
 	Password string   `json:"password,omitempty"`
 	Name     string   `json:"name" binding:"required"`
 	Bio      string   `json:"bio,omitempty"`
@@ -50,4 +50,10 @@ func IsValidRole(role Role) bool {
     default:
         return false
     }
+}
+
+type PasswordChangeRequest struct {
+    CurrentPassword string `json:"current_password" binding:"required"`
+    NewPassword     string `json:"new_password" binding:"required,min=8"`
+    ConfirmPassword string `json:"confirm_password" binding:"required,eqfield=NewPassword"`
 }

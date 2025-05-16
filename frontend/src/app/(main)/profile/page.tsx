@@ -130,6 +130,14 @@ return (
                   Edit Profile
                 </Button>
               </Link>
+              <Link href="/profile/change-password">
+                <Button 
+                  variant="default" 
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  Change password
+                </Button>
+              </Link>
               <Link href="/sessions/my-sessions">
                 <Button 
                   variant="outline" 
