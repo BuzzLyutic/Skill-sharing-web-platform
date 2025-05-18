@@ -22,7 +22,7 @@ func GetJWTConfig() JWTConfig {
     }
 }
 
-// Helper function to get an environment variable or a default value
+// Вспомогательная функция для получения переменной окружения или значения по умолчанию
 func GetEnv(key, defaultValue string) string {
     if value, exists := os.LookupEnv(key); exists {
         return value
@@ -30,7 +30,7 @@ func GetEnv(key, defaultValue string) string {
     return defaultValue
 }
 
-// Helper function to get an environment variable as an integer
+// Вспомогательная функция для получения переменной окружения в виде целого числа
 func getEnvAsInt(key string, defaultValue int) int {
     if valueStr, exists := os.LookupEnv(key); exists {
         if value, err := strconv.Atoi(valueStr); err == nil {

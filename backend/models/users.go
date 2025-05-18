@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// User represents a user in the system
+// Пользователь представляет пользователя в системе
 type User struct {
 	ID            uuid.UUID `json:"id" db:"id"`
 	Email         string    `json:"email" db:"email"`
@@ -23,7 +23,7 @@ type User struct {
 	RefreshToken  *string    `db:"jwt_refresh_token" json:"-"`
 }
 
-// UserRequest for creating/updating users
+// UserRequest на создание/обновление пользователей
 type UserRequest struct {
 	Email    string   `json:"email,omitempty" binding:"omitempty,email"`
 	Password string   `json:"password,omitempty"`
@@ -33,7 +33,6 @@ type UserRequest struct {
 }
 
 
-// Role type for clarity
 type Role string
 
 const (

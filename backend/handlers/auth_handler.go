@@ -44,19 +44,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
     // Запрещаем установку роли admin/moderator через обычную регистрацию
     if models.Role(req.Role) == models.RoleAdmin || models.Role(req.Role) == models.RoleModerator {
          log.Printf("WARN: Attempt to register user %s with privileged role %s", req.Email, req.Role)
-         // Можно или игнорировать поле Role, или вернуть ошибку
-         // Игнорируем:
          req.Role = "" // Репозиторий установит 'user' по умолчанию
-         // Или ошибка:
-         // c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot self-assign privileged roles during registration"})
-         // return
     }
 
 
 	requestContext := c.Request.Context() // Получаем контекст
 
 	// Проверяем, существует ли пользователь с таким email
-	_, err := h.userRepo.GetByEmail(requestContext, req.Email) // Передаем контекст!
+	_, err := h.userRepo.GetByEmail(requestContext, req.Email) 
 	if err == nil { // Ошибки нет - пользователь найден
 		c.JSON(http.StatusConflict, gin.H{"error": "User with this email already exists"})
 		return
@@ -76,7 +71,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	// Создаем пользователя
-	// Передаем контекст! Репозиторий вернет *models.User
+	// Репозиторий вернет *models.User
 	user, err := h.userRepo.CreateUser(requestContext, req, string(passwordHash))
 	if err != nil {
         // Репозиторий уже залогировал ошибку БД
@@ -103,7 +98,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	// Сохраняем refresh token в базе данных
-	if err := h.userRepo.SaveRefreshToken(requestContext, user.ID, &refreshToken); err != nil { // Передаем контекст!
+	if err := h.userRepo.SaveRefreshToken(requestContext, user.ID, &refreshToken); err != nil { 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to finalize registration"})
 		return
 	}
@@ -127,7 +122,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
     requestContext := c.Request.Context()
 
 	// Находим пользователя по email
-	user, err := h.userRepo.GetByEmail(requestContext, req.Email) // Передаем контекст!
+	user, err := h.userRepo.GetByEmail(requestContext, req.Email) 
 	if err != nil {
 		if errors.Is(err, repositories.ErrUserNotFound) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
@@ -163,7 +158,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// Сохраняем refresh token
-	if err := h.userRepo.SaveRefreshToken(requestContext, user.ID, &refreshToken); err != nil { // Передаем контекст!
+	if err := h.userRepo.SaveRefreshToken(requestContext, user.ID, &refreshToken); err != nil { 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to finalize login"})
 		return
 	}
@@ -191,7 +186,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
     requestContext := c.Request.Context()
 
 	// Находим пользователя по refresh token
-	user, err := h.userRepo.GetUserByRefreshToken(requestContext, req.RefreshToken) // Передаем контекст!
+	user, err := h.userRepo.GetUserByRefreshToken(requestContext, req.RefreshToken)
 	if err != nil {
 		if errors.Is(err, repositories.ErrUserNotFound) {
             log.Printf("WARN: Invalid refresh token presented: %s...", req.RefreshToken[:min(len(req.RefreshToken), 10)])
@@ -215,7 +210,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	}
 
 	// Сохраняем новый refresh token
-	if err := h.userRepo.SaveRefreshToken(requestContext, user.ID, &refreshToken); err != nil { // Передаем контекст!
+	if err := h.userRepo.SaveRefreshToken(requestContext, user.ID, &refreshToken); err != nil { 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save new refresh token"})
 		return
 	}
@@ -238,7 +233,7 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 
     requestContext := c.Request.Context()
 
-	user, err := h.userRepo.GetByID(requestContext, userID) // Передаем контекст!
+	user, err := h.userRepo.GetByID(requestContext, userID) 
 	if err != nil {
         if errors.Is(err, repositories.ErrUserNotFound) {
              log.Printf("GetMe: User %s not found in DB, but token was valid?", userID)
@@ -270,7 +265,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
     requestContext := c.Request.Context()
 
 	// Удаляем refresh token
-	err := h.userRepo.InvalidateRefreshToken(requestContext, userID) // Передаем контекст!
+	err := h.userRepo.InvalidateRefreshToken(requestContext, userID) 
     if err != nil && !errors.Is(err, repositories.ErrUserNotFound) {
         // Логируем ошибку, если это не просто "юзер не найден"
         log.Printf("Logout: Failed to invalidate refresh token for user %s: %v", userID, err)
@@ -280,9 +275,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
-// generateTokens ... (оставляем как есть, с использованием констант)
 func (h *AuthHandler) generateTokens(user models.User) (string, string, int64, error) {
-    // ... (код с использованием middleware.ContextUserIDKey и т.д.) ...
 	accessTokenExpiration := time.Now().Add(h.jwtCfg.AccessTokenDuration)
 	accessTokenClaims := jwt.MapClaims{
 		middleware.ContextUserIDKey: user.ID.String(),
@@ -290,14 +283,12 @@ func (h *AuthHandler) generateTokens(user models.User) (string, string, int64, e
 		middleware.ContextRoleKey:   user.Role, // Передаем роль как строку
 		"exp":                       accessTokenExpiration.Unix(),
 	}
-	// ... (генерация access token)
 	refreshTokenExpiration := time.Now().Add(h.jwtCfg.RefreshTokenDuration)
 	refreshTokenClaims := jwt.MapClaims{
 		middleware.ContextUserIDKey: user.ID.String(),
 		"exp":                       refreshTokenExpiration.Unix(),
 	}
-    // ... (генерация refresh token)
-	// ... (возврат)
+
     accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessTokenClaims)
     accessTokenString, err := accessToken.SignedString([]byte(h.jwtCfg.SecretKey))
     if err != nil {
@@ -318,7 +309,6 @@ func (h *AuthHandler) generateTokens(user models.User) (string, string, int64, e
 func getUserIDFromContext(ctx *gin.Context) (uuid.UUID, bool) {
 	userIDValue, exists := ctx.Get(middleware.ContextUserIDKey) // Используем константу из middleware
 	if !exists {
-		// log.Printf("DEBUG: UserID key '%s' not found in context", middleware.ContextUserIDKey) // Для отладки
 		return uuid.Nil, false
 	}
 

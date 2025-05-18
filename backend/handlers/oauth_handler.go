@@ -24,7 +24,6 @@ type OAuthHandler struct {
 	userRepo       *repositories.UserRepository
 	jwtCfg         config.JWTConfig
 	googleOAuthCfg *oauth2.Config
-	// githubOAuthCfg *oauth2.Config // Для GitHub
 }
 
 // NewOAuthHandler создает новый обработчик OAuth аутентификации
@@ -47,16 +46,10 @@ func NewOAuthHandler(db *sqlx.DB, cfg config.Config) *OAuthHandler {
 		Endpoint:     google.Endpoint,
 	}
 
-    // Добавьте аналогичную инициализацию для GitHub, если нужно
-    // githubClientID := config.GetEnv("GITHUB_CLIENT_ID", "")
-    // ...
-	// githubOAuthCfg := &oauth2.Config{...}
-
 	return &OAuthHandler{
 		userRepo:       repositories.NewUserRepository(db),
 		jwtCfg:         cfg.JWTConfig,
 		googleOAuthCfg: googleOAuthCfg,
-        // githubOAuthCfg: githubOAuthCfg,
 	}
 }
 
@@ -81,13 +74,6 @@ func (h *OAuthHandler) GoogleCallback(c *gin.Context) {
          return
     }
 
-    // Проверка state (если используется)
-    // state := c.Query("state")
-    // if state != "state" { // Сравнить с сохраненным state из сессии/cookie
-    //     c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state parameter"})
-    //     return
-    // }
-
 	code := c.Query("code")
 	if code == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization code not provided by Google"})
@@ -98,7 +84,7 @@ func (h *OAuthHandler) GoogleCallback(c *gin.Context) {
     requestContext := c.Request.Context()
 
 	// Обмен кода на токен
-	token, err := h.googleOAuthCfg.Exchange(requestContext, code) // Передаем контекст!
+	token, err := h.googleOAuthCfg.Exchange(requestContext, code) 
 	if err != nil {
         log.Printf("ERROR: Failed to exchange Google token: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate Google authorization"})
@@ -106,7 +92,7 @@ func (h *OAuthHandler) GoogleCallback(c *gin.Context) {
 	}
 
     // Получение информации о пользователе
-	client := h.googleOAuthCfg.Client(requestContext, token) // Передаем контекст!
+	client := h.googleOAuthCfg.Client(requestContext, token) 
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo") // Запрос к API Google
 	if err != nil {
         log.Printf("ERROR: Failed to get user info from Google: %v", err)
@@ -122,7 +108,7 @@ func (h *OAuthHandler) GoogleCallback(c *gin.Context) {
 		Name          string `json:"name"`
 		GivenName     string `json:"given_name"`
 		FamilyName    string `json:"family_name"`
-		Picture       string `json:"picture"` // Можно сохранить URL аватара
+		Picture       string `json:"picture"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
         log.Printf("ERROR: Failed to decode Google user info: %v", err)
@@ -149,7 +135,7 @@ func (h *OAuthHandler) handleOAuthUser(c *gin.Context, provider, oauthID, email,
     requestContext := c.Request.Context() // Контекст для запросов к БД
 
 	// 1. Попытка найти пользователя по OAuth данным
-	user, err = h.userRepo.GetByOAuth(requestContext, provider, oauthID) // Передаем контекст!
+	user, err = h.userRepo.GetByOAuth(requestContext, provider, oauthID) 
 	if err != nil {
 		if !errors.Is(err, repositories.ErrUserNotFound) {
 			log.Printf("Error checking user by OAuth (%s, %s): %v", provider, oauthID, err)
@@ -158,7 +144,7 @@ func (h *OAuthHandler) handleOAuthUser(c *gin.Context, provider, oauthID, email,
 		}
         // Ошибка ErrUserNotFound - ищем по email
 		log.Printf("User not found by OAuth (%s, %s). Checking by email: %s", provider, oauthID, email)
-		user, err = h.userRepo.GetByEmail(requestContext, email) // Передаем контекст!
+		user, err = h.userRepo.GetByEmail(requestContext, email) 
 		if err != nil {
 			if !errors.Is(err, repositories.ErrUserNotFound) {
 				log.Printf("Error checking user by email (%s): %v", email, err)
@@ -166,7 +152,7 @@ func (h *OAuthHandler) handleOAuthUser(c *gin.Context, provider, oauthID, email,
 				return
 			}
 
-			// --- Пользователь не найден ни по OAuth, ни по email -> Создаем нового ---
+			// Пользователь не найден ни по OAuth, ни по email -> Создаем нового
 			log.Printf("User not found by email (%s). Creating new user.", email)
             providerStr := provider // Создаем копию строки, чтобы взять адрес
 			newUser := models.User{
@@ -175,13 +161,8 @@ func (h *OAuthHandler) handleOAuthUser(c *gin.Context, provider, oauthID, email,
 				OAuthID:       &oauthID,
 				Name:          name,
 				Role:          string(models.RoleUser), // Устанавливаем роль по умолчанию
-                // Bio:           nil, // Можно добавить bio из профиля OAuth, если есть
-                // Skills:        nil, // Начальные скиллы?
-                // AverageRating: 0.0,
-                // AvatarURL: &avatarURL // Если есть поле AvatarURL в модели User
 			}
 
-			// Передаем контекст!
 			createdUser, creationErr := h.userRepo.CreateOAuthUser(requestContext, newUser)
 			if creationErr != nil {
                 // Проверяем на конфликт email, если вдруг гонка состояний
@@ -197,7 +178,7 @@ func (h *OAuthHandler) handleOAuthUser(c *gin.Context, provider, oauthID, email,
 			log.Printf("Successfully created new user %s via OAuth %s", user.ID, provider)
 
 		} else {
-            // --- Пользователь найден по email -> Связываем OAuth ---
+            // Пользователь найден по email -> Связываем OAuth
             if user == nil { // Доп. проверка на nil после GetByEmail
                  log.Printf("ERROR: GetByEmail returned nil user for email %s without error", email)
                  c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process login"})
@@ -236,16 +217,13 @@ func (h *OAuthHandler) handleOAuthUser(c *gin.Context, provider, oauthID, email,
             }
 		}
 	} else {
-		// --- Пользователь найден по OAuth данным -> Просто логинимся ---
+		// Пользователь найден по OAuth данным -> Просто логинимся
         if user == nil { // Доп. проверка на nil после GetByOAuth
              log.Printf("ERROR: GetByOAuth returned nil user for %s/%s without error", provider, oauthID)
              c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process login"})
              return
         }
 		log.Printf("User %s found by OAuth (%s, %s). Logging in.", user.ID, provider, oauthID)
-        // Можно добавить обновление имени/аватара из OAuth при каждом входе
-        // updateErr := h.userRepo.UpdateOAuthDetails(requestContext, user.ID, name, avatarURL)
-        // if updateErr != nil { log.Printf("WARN: Failed to update user details from OAuth for %s: %v", user.ID, updateErr) }
 	}
 
 	// --- Генерация и отправка токенов ---
@@ -262,7 +240,7 @@ func (h *OAuthHandler) handleOAuthUser(c *gin.Context, provider, oauthID, email,
 		// Не критично для OAuth входа, продолжаем
 	}
 
-	// --- Редирект на фронтенд с токенами во фрагменте ---
+	// Редирект на фронтенд с токенами во фрагменте
     // Убедитесь, что URL фронтенда правильный (из конфига или env)
     frontendCallbackURL := config.GetEnv("FRONTEND_OAUTH_CALLBACK_URL", "http://localhost:3000/auth/callback")
 
@@ -278,18 +256,12 @@ func (h *OAuthHandler) handleOAuthUser(c *gin.Context, provider, oauthID, email,
 	c.Redirect(http.StatusTemporaryRedirect, callbackURL)
 }
 
-
-
-// generateTokens создает новую пару JWT токенов
-// ВАЖНО: Эта функция дублирует логику из AuthHandler.
-// Рассмотрите возможность вынести ее в общий сервис/пакет (например, pkg/jwthelper)
-// или передавать функцию генерации/AuthHandler в NewOAuthHandler.
 func (h *OAuthHandler) generateTokens(user models.User) (string, string, int64, error) {
 	accessTokenExpiration := time.Now().Add(h.jwtCfg.AccessTokenDuration)
 	accessTokenClaims := jwt.MapClaims{
-		middleware.ContextUserIDKey: user.ID.String(), // Используем константу
-		middleware.ContextEmailKey:  user.Email,       // Используем константу
-		middleware.ContextRoleKey:   user.Role,        // Используем константу (роль теперь строка)
+		middleware.ContextUserIDKey: user.ID.String(), 
+		middleware.ContextEmailKey:  user.Email,       
+		middleware.ContextRoleKey:   user.Role,        
 		"exp":                       accessTokenExpiration.Unix(),
 	}
 

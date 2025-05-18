@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  postgres_db: # Renamed to avoid conflict if you run both projects
+    image: postgres:15-alpine
+    container_name: go_project_postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-gouser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-gopass}
+      POSTGRES_DB: ${DB_NAME:-godb}
+    volumes:
+      - go_postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5433:5432" # Use a different host port if 5432 is taken
+    networks:
+      - go_project_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: go_project_backend
+    ports:
+      - "8080:8080" # Or your Go app's port
+    environment:
+      GIN_MODE: release # Or debug
+      DB_HOST: postgres_db # Service name
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-gouser}
+      DB_PASSWORD: ${DB_PASSWORD:-gopass}
+      DB_NAME: ${DB_NAME:-godb}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-yoursupersecretkey}
+      # ... other backend env vars
+    depends_on:
+      - postgres_db
+    volumes: # For local development with hot-reloading (if your Go setup supports it)
+      - ./backend:/app
+    networks:
+      - go_project_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: go_project_frontend
+    ports:
+      - "3001:3000" # Use a different host port if 3000 is taken
+    environment:
+      NEXT_PUBLIC_BACKEND_URL: http://localhost:8080 # For browser access via host
+      # Or if direct service-to-service for SSR: http://backend:8080
+    depends_on:
+      - backend
+    volumes: # For local development
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - go_project_network
+
+networks:
+  go_project_network:
+    driver: bridge
+
+volumes:
+  go_postgres_data:

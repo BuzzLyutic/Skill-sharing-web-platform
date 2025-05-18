@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Session represents a skill-sharing session
+// Сессия представляет собой сеанс обмена навыками
 type Session struct {
 	ID              uuid.UUID `json:"id" db:"id"`
 	Title           string    `json:"title" db:"title"`
@@ -20,7 +20,7 @@ type Session struct {
 	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
 }
 
-// SessionRequest for creating/updating sessions
+// SessionRequest для создания/обновления сеансов
 type SessionRequest struct {
 	Title           string    `json:"title" binding:"required"`
 	Description     string    `json:"description"`
@@ -38,7 +38,7 @@ type SessionSearchFilters struct {
     Skill           string    
     DateFrom        *time.Time 
     DateTo          *time.Time
-    MinRating       float64   // Для фильтрации по среднему рейтингу сессии (потребует JOIN с feedback или денормализации)
+    MinRating       float64   // Для фильтрации по среднему рейтингу сессии
     CreatorID       *uuid.UUID
     Location        string
     AvailableSlots  bool      // Только сессии, где есть свободные места

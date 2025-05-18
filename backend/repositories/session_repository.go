@@ -23,36 +23,34 @@ var (
 	ErrSessionFull          = errors.New("session is full")
 	ErrUpdateConflict       = errors.New("update conflict detected") // Если понадобится оптимистичная блокировка
 	ErrDatabase             = errors.New("database error")          // Общая ошибка БД
-	ErrForbidden            = errors.New("operation forbidden")     // Для случаев авторизации на уровне репо (хотя лучше в сервисе/контроллере)
+	ErrForbidden            = errors.New("operation forbidden")
 	ErrParticipantNotFound = errors.New("participant not found for this session")
 )
 
 
-// SessionRepository handles database operations for sessions
+// SessionRepository обрабатывает операции с базой данных для сеансов
 type SessionRepository struct {
 	db *sqlx.DB
 }
 
-// NewSessionRepository creates a new session repository
+// NewSessionRepository создает новый репозиторий сеансов
 func NewSessionRepository(db *sqlx.DB) *SessionRepository {
 	return &SessionRepository{db: db}
 }
 
-// GetAll retrieves all sessions (Рассмотрите пагинацию для больших списков)
+// GetAll извлекает все сеансы
 func (r *SessionRepository) GetAll(ctx context.Context) ([]models.Session, error) {
 	sessions := []models.Session{}
 	// Добавляем ORDER BY для предсказуемого порядка
 	query := `SELECT * FROM sessions ORDER BY created_at DESC`
 	err := r.db.SelectContext(ctx, &sessions, query) // Используем SelectContext
 	if err != nil {
-		// Можно добавить логирование здесь
-		// log.Printf("Error fetching all sessions: %v", err)
 		return nil, fmt.Errorf("%w: failed to get all sessions: %v", ErrDatabase, err)
 	}
 	return sessions, nil
 }
 
-// GetByID retrieves a session by ID
+// GetByID извлекает сеанс по идентификатору
 func (r *SessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Session, error) {
 	var session models.Session
 	query := `SELECT * FROM sessions WHERE id = $1`
@@ -67,7 +65,7 @@ func (r *SessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 	return &session, nil
 }
 
-// Create creates a new session
+// Create создает новый сеанс
 func (r *SessionRepository) Create(ctx context.Context, creatorID uuid.UUID, req models.SessionRequest) (*models.Session, error) {
 	var createdSession models.Session
 	query := `
@@ -85,15 +83,12 @@ func (r *SessionRepository) Create(ctx context.Context, creatorID uuid.UUID, req
 	)
 	if err != nil {
 		// log.Printf("Error creating session for user %s: %v", creatorID, err)
-		// Можно проверить на specific postgres errors (e.g., unique constraint violation)
 		return nil, fmt.Errorf("%w: failed to create session: %v", ErrDatabase, err)
 	}
 	return &createdSession, nil
 }
 
-// Update updates an existing session
-// Важно: Этот метод НЕ проверяет, является ли пользователь создателем сессии.
-// Эту проверку лучше делать в контроллере или сервисном слое.
+// Update обновляет существующий сеанс
 func (r *SessionRepository) Update(ctx context.Context, id uuid.UUID, req models.SessionRequest) (*models.Session, error) {
 	var updatedSession models.Session
 	query := `
@@ -121,9 +116,7 @@ func (r *SessionRepository) Update(ctx context.Context, id uuid.UUID, req models
 	return &updatedSession, nil
 }
 
-// Delete deletes a session
-// Важно: Этот метод НЕ проверяет, является ли пользователь создателем сессии.
-// Эту проверку лучше делать в контроллере или сервисном слое.
+// Delete удаляет сеанс
 func (r *SessionRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM sessions WHERE id = $1`
 	result, err := r.db.ExecContext(ctx, query, id) // Используем ExecContext
@@ -145,7 +138,7 @@ func (r *SessionRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// GetParticipants gets all participants of a session
+// GetParticipants получает доступ ко всем участникам сеанса
 func (r *SessionRepository) GetParticipants(ctx context.Context, sessionID uuid.UUID) ([]models.User, error) {
 	users := []models.User{}
 	// Выбираем нужные поля пользователя, избегаем SELECT *
@@ -158,7 +151,6 @@ func (r *SessionRepository) GetParticipants(ctx context.Context, sessionID uuid.
 	err := r.db.SelectContext(ctx, &users, query, sessionID) // Используем SelectContext
 	if err != nil {
 		// log.Printf("Error fetching participants for session %s: %v", sessionID, err)
-		// Ошибка sql.ErrNoRows здесь нормальна (нет участников), не возвращаем ошибку
 		if errors.Is(err, sql.ErrNoRows) {
 			return users, nil // Возвращаем пустой слайс
 		}
@@ -197,7 +189,6 @@ func (r *SessionRepository) IsParticipant(ctx context.Context, sessionID, userID
 
 
 // JoinSession добавляет пользователя в сессию (вставляет запись в session_participants)
-// Важно: Не проверяет max_participants или является ли пользователь создателем. Эти проверки должны быть в контроллере/сервисе.
 func (r *SessionRepository) JoinSession(ctx context.Context, sessionID, userID uuid.UUID) error {
     // Проверка, не является ли пользователь уже участником
     isAlreadyParticipant, err := r.IsParticipant(ctx, sessionID, userID)
@@ -211,9 +202,6 @@ func (r *SessionRepository) JoinSession(ctx context.Context, sessionID, userID u
 	query := `INSERT INTO session_participants (session_id, user_id) VALUES ($1, $2)`
 	_, err = r.db.ExecContext(ctx, query, sessionID, userID) // Используем ExecContext
 	if err != nil {
-		// Здесь можно проверять специфичные ошибки БД, например, нарушение foreign key (если сессия или юзер удалены)
-		// или unique constraint (если проверка выше не сработала из-за гонки состояний, хотя она маловероятна)
-		// log.Printf("Error joining session %s for user %s: %v", sessionID, userID, err)
 		return fmt.Errorf("%w: failed to join session: %v", ErrDatabase, err)
 	}
 	return nil
@@ -358,22 +346,15 @@ func (r *SessionRepository) SearchSessions(ctx context.Context, filters models.S
     var args []interface{}
     argID := 1
 
-    // --- Фильтры ---
-	// --- Creator ID Filter (for "My Sessions") ---
     if filters.CreatorID != nil && *filters.CreatorID != uuid.Nil {
         whereClauses = append(whereClauses, fmt.Sprintf("s.creator_id = $%d", argID))
         args = append(args, *filters.CreatorID)
         argID++
         log.Printf("SearchSessions: Filtering by CreatorID: %s", (*filters.CreatorID).String())
-    } else {
-         // This log is useful when debugging why a filter might not be applied
-        // log.Println("SearchSessions: Not filtering by CreatorID (CreatorID is nil or Nil UUID in filters)")
     }
 
     if filters.Query != "" {
         // Поиск по названию и описанию
-        // Используйте FTS (Full Text Search) в PostgreSQL для лучшей производительности на больших данных!
-        // Для простоты здесь LIKE
         queryWords := strings.Fields(filters.Query)
         for _, word := range queryWords {
              whereClauses = append(whereClauses, fmt.Sprintf("(s.title ILIKE $%d OR s.description ILIKE $%d)", argID, argID+1))
@@ -386,8 +367,6 @@ func (r *SessionRepository) SearchSessions(ctx context.Context, filters models.S
         args = append(args, filters.Category)
         argID++
     }
-    // TODO: Добавить фильтр по s.creator_id (если filters.CreatorID != nil)
-    // TODO: Добавить фильтр по s.location (если filters.Location != "")
 
     if filters.DateFrom != nil {
         whereClauses = append(whereClauses, fmt.Sprintf("s.date_time >= $%d", argID))
@@ -409,9 +388,8 @@ func (r *SessionRepository) SearchSessions(ctx context.Context, filters models.S
         whereSQL = " WHERE " + strings.Join(whereClauses, " AND ")
     }
 
-    // --- Сборка полного запроса для данных ---
     finalQuery := baseQuery + whereSQL
-    // finalQuery += " GROUP BY s.id" // Если используете агрегатные функции (COUNT, AVG) в SELECT
+    // finalQuery += " GROUP BY s.id" 
     finalQuery += " ORDER BY s.date_time ASC" // Или другой порядок
 
     // Добавляем пагинацию к args для основного запроса
@@ -429,7 +407,7 @@ func (r *SessionRepository) SearchSessions(ctx context.Context, filters models.S
     }
 
 
-    // --- Выполнение запросов ---
+    // Выполнение запросов
     // 1. Получение общего количества записей (для пагинации на клиенте)
     err := r.db.GetContext(ctx, &totalCount, countQuery+whereSQL, args...) // Используем args без пагинации
     if err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -455,7 +433,7 @@ func (r *SessionRepository) SearchSessions(ctx context.Context, filters models.S
 }
 
 
-// GetJoinedSessionsByUserID retrieves all sessions a user has joined
+// GetJoinedSessionsByUserID извлекает все сеансы, к которым присоединился пользователь
 func (r *SessionRepository) GetJoinedSessionsByUserID(ctx context.Context, userID uuid.UUID, filters models.SessionSearchFilters) ([]models.Session, int, error) {
     var sessions []models.Session
     var totalCount int
@@ -474,7 +452,6 @@ func (r *SessionRepository) GetJoinedSessionsByUserID(ctx context.Context, userI
     args := []interface{}{userID}
     argId := 2 // Start next arg index at 2
 
-    // Apply other filters from SessionSearchFilters if needed (category, date, etc.)
     if filters.Category != "" {
         conditions = append(conditions, fmt.Sprintf("s.category = $%d", argId))
         args = append(args, filters.Category)
@@ -482,17 +459,15 @@ func (r *SessionRepository) GetJoinedSessionsByUserID(ctx context.Context, userI
     }
     if filters.ExcludePast {
         conditions = append(conditions, fmt.Sprintf("s.date_time >= $%d", argId))
-        args = append(args, time.Now()) // Or use UTC depending on your db timezone
+        args = append(args, time.Now()) 
         argId++
     }
-    // ... add other filters ...
 
     whereClause := ""
     if len(conditions) > 0 {
         whereClause = " WHERE " + strings.Join(conditions, " AND ")
     }
 
-    // Count query
     finalCountQuery := countBaseQuery + whereClause
     err := r.db.GetContext(ctx, &totalCount, finalCountQuery, args...)
     if err != nil {
@@ -500,7 +475,6 @@ func (r *SessionRepository) GetJoinedSessionsByUserID(ctx context.Context, userI
         return nil, 0, fmt.Errorf("%w: failed to count joined sessions: %v", ErrDatabase, err)
     }
 
-    // Data query
     orderBy := " ORDER BY s.date_time DESC" // Or other preferred order
     limitOffset := fmt.Sprintf(" LIMIT $%d OFFSET $%d", argId, argId+1)
     args = append(args, filters.Limit, filters.Offset)

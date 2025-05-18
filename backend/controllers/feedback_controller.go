@@ -11,16 +11,15 @@ import (
 	"github.com/google/uuid"
 )
 
-// Вспомогательная функция из SessionController (если она не в общем пакете)
+// Вспомогательная функция из SessionController
 // func getUserIDFromContext(ctx *gin.Context) (uuid.UUID, bool) { ... }
 
 type FeedbackController struct {
 	repo        *repositories.FeedbackRepository
-	sessionRepo *repositories.SessionRepository // <-- Добавляем репозиторий сессий для проверок
+	sessionRepo *repositories.SessionRepository
 }
 
 // NewFeedbackController создает новый контроллер обратной связи
-// Теперь принимает оба репозитория
 func NewFeedbackController(repo *repositories.FeedbackRepository, sessionRepo *repositories.SessionRepository) *FeedbackController {
 	return &FeedbackController{
 		repo:        repo,
@@ -58,8 +57,6 @@ func (c *FeedbackController) CreateFeedback(ctx *gin.Context) {
 
     requestContext := ctx.Request.Context() // Получаем стандартный контекст
 
-	// --- ДОПОЛНИТЕЛЬНЫЕ ПРОВЕРКИ ПЕРЕД СОЗДАНИЕМ ОТЗЫВА ---
-
 	// 4. Проверяем, существует ли сессия
 	session, err := c.sessionRepo.GetByID(requestContext, sessionID)
 	if err != nil {
@@ -93,17 +90,8 @@ func (c *FeedbackController) CreateFeedback(ctx *gin.Context) {
 		return
 	}
 
-    // 7. (Опционально) Проверяем, завершилась ли сессия
-    // if session.DateTime.After(time.Now()) {
-    //     ctx.JSON(http.StatusBadRequest, gin.H{"error": "You can only leave feedback after the session has ended"})
-    //     return
-    // }
-
-    // --- КОНЕЦ ДОПОЛНИТЕЛЬНЫХ ПРОВЕРОК ---
-
 
 	// 8. Создаем отзыв в репозитории (передаем контекст!)
-	// Репозиторий сам проверит на дубликат (ErrFeedbackAlreadyExists)
 	feedback, err := c.repo.CreateFeedback(requestContext, req, sessionID, userID)
 	if err != nil {
 		if errors.Is(err, repositories.ErrFeedbackAlreadyExists) {
@@ -132,10 +120,6 @@ func (c *FeedbackController) GetFeedback(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session ID format"})
 		return
 	}
-
-    // (Опционально) Проверить, существует ли сессия перед получением отзывов
-    // _, err = c.sessionRepo.GetByID(ctx.Request.Context(), sessionID)
-    // if err != nil { ... }
 
 	// Получаем отзывы (передаем контекст!)
 	feedbacks, err := c.repo.GetFeedbackBySession(ctx.Request.Context(), sessionID)

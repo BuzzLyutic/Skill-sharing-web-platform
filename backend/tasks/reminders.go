@@ -19,7 +19,7 @@ func CheckSessionReminders(
     userRepo *repositories.UserRepository, // Для получения участников
     notifRepo *repositories.NotificationRepository,
 ) {
-	ticker := time.NewTicker(1 * time.Hour) // Проверять каждый час (для MVP можно чаще, например, 5 минут)
+	ticker := time.NewTicker(1 * time.Hour) // Проверять каждый час 
 	defer ticker.Stop()
 
 	for {
@@ -40,9 +40,6 @@ func processReminders(
     userRepo *repositories.UserRepository,
     notifRepo *repositories.NotificationRepository,
 ) error {
-	// 1. Найти сессии, которые начнутся в ближайшие, например, 24 часа
-	// (и для которых напоминание еще не было отправлено - потребуется доп. поле/таблица)
-	// Для MVP упростим: просто найдем сессии, начинающиеся СЕГОДНЯ или ЗАВТРА
 
 	now := time.Now()
 	upcomingSessions, err := sessionRepo.GetSessionsStartingSoon(ctx, now.Add(24*time.Hour)) // Нужен новый метод в repo
@@ -65,11 +62,6 @@ func processReminders(
 		}
 
 		for _, participant := range participants {
-            // Проверяем, не отправляли ли мы уже этому юзеру напоминание об этой сессии
-            // Для MVP можно не проверять, просто отправим. В проде нужна таблица sent_reminders.
-            // if hasSentReminder(ctx, notifRepo, participant.ID, session.ID, models.NotificationTypeSessionReminder) {
-            //    continue
-            // }
 
 			notifMsg := fmt.Sprintf("Reminder: Your session '%s' is starting on %s.",
 				session.Title, session.DateTime.Format("Jan 2, 2006 at 3:04 PM"))
@@ -91,8 +83,3 @@ func processReminders(
 	}
 	return nil
 }
-
-// Добавить метод GetSessionsStartingSoon в SessionRepository
-// func (r *SessionRepository) GetSessionsStartingSoon(ctx context.Context, beforeTime time.Time) ([]models.Session, error) { ... }
-// Пример запроса:
-// SELECT * FROM sessions WHERE date_time > NOW() AND date_time <= $1 ORDER BY date_time ASC

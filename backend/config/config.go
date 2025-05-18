@@ -8,7 +8,7 @@ import (
     _ "github.com/lib/pq"
 )
 
-// Config holds all application configuration
+// Config содержит всю конфигурацию приложения
 type Config struct {
     ServerPort string
     DBHost     string
@@ -19,7 +19,7 @@ type Config struct {
     JWTConfig  JWTConfig
 }
 
-// LoadConfig loads configuration from environment variables
+// LoadConfig загружает конфигурацию из переменных среды
 func LoadConfig() Config {
     if err := godotenv.Load(".env"); err != nil {
         log.Println("No .env file found or failed to load")
@@ -35,7 +35,7 @@ func LoadConfig() Config {
     }
 }
 
-// InitDB initializes database connection
+// InitDB инициализирует подключение к базе данных
 func InitDB(cfg Config) (*sqlx.DB, error) {
     dsn := fmt.Sprintf(
         "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",

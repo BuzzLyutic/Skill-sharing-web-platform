@@ -17,7 +17,7 @@ import (
 
 // JWTAuthMiddleware проверяет валидность JWT токена
 func JWTAuthMiddleware(jwtCfg config.JWTConfig) gin.HandlerFunc {
-    jwtSecret := []byte(jwtCfg.SecretKey) // Cache the secret key
+    jwtSecret := []byte(jwtCfg.SecretKey) 
     
     return func(c *gin.Context) {
         // Получаем токен из заголовка Authorization
@@ -48,9 +48,9 @@ func JWTAuthMiddleware(jwtCfg config.JWTConfig) gin.HandlerFunc {
         })
 
         if err != nil {
-			// Log the specific parsing error
+			// Регистрируйте конкретную ошибку синтаксического анализа
 			log.Printf("JWTAuthMiddleware: Token parsing error from %s: %v", c.ClientIP(), err)
-			// Check for specific JWT error types for potentially different client messages
+			// Проверьте наличие определенных типов ошибок JWT для потенциально разных клиентских сообщений
 			if errors.Is(err, jwt.ErrTokenMalformed) {
                 c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Malformed token"})
             } else if errors.Is(err, jwt.ErrTokenSignatureInvalid) {
@@ -86,7 +86,7 @@ func JWTAuthMiddleware(jwtCfg config.JWTConfig) gin.HandlerFunc {
                 log.Printf("JWTAuthMiddleware: Warning - Missing or invalid type for '%s' claim from %s", ContextEmailKey, c.ClientIP())
             }
 
-            // --- Get Role ---
+            // Get Role
 			role, ok := claims[ContextRoleKey].(string)
 			if !ok {
 				log.Printf("JWTAuthMiddleware: Missing or invalid type for '%s' claim from %s", ContextRoleKey, c.ClientIP())
@@ -122,13 +122,13 @@ func RoleAuthMiddleware(requiredRole models.Role) gin.HandlerFunc {
         role, ok := roleValue.(string)
         if !ok {
              log.Printf("RoleAuthMiddleware: Role key '%s' in context is not a string for client %s", ContextRoleKey, c.ClientIP())
-             c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error: Invalid role data"}) // Should not happen if JWT middleware is correct
+             c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error: Invalid role data"})
              return
         }
 
-        // Basic role check - could be expanded for hierarchical roles
+        // Базовая проверка ролей - может быть расширена для иерархических ролей
         if role != string(requiredRole) {
-             log.Printf("RoleAuthMiddleware: Access denied for user %s. Required role: '%s', User role: '%s'", c.GetString(ContextEmailKey), requiredRole, role) // Log email or ID
+             log.Printf("RoleAuthMiddleware: Access denied for user %s. Required role: '%s', User role: '%s'", c.GetString(ContextEmailKey), requiredRole, role) 
              c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("Access forbidden: Requires '%s' role", requiredRole)})
              return
         }

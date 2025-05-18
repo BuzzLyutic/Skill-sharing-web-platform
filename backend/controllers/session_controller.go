@@ -15,14 +15,14 @@ import (
 	"github.com/google/uuid"
 )
 
-// SessionController handles session-related HTTP requests
+// SessionController обрабатывает HTTP-запросы, связанные с сеансом
 type SessionController struct {
 	repo *repositories.SessionRepository
 	userRepo *repositories.UserRepository
 	notifRepo *repositories.NotificationRepository
 }
 
-// NewSessionController creates a new session controller
+// NewSessionController создает новый контроллер сеанса
 func NewSessionController(
 	repo *repositories.SessionRepository,
 	userRepo *repositories.UserRepository,
@@ -54,12 +54,12 @@ func getUserIDFromContext(ctx *gin.Context) (uuid.UUID, bool) {
 }
 
 
-// GetAll (теперь с фильтрацией и пагинацией)
+// GetAll
 func (c *SessionController) GetAll(ctx *gin.Context) {
     var filters models.SessionSearchFilters // Используем тип из репозитория или models
 
     // Значения по умолчанию для пагинации
-    filters.Limit = 10 // Например, 10 на страницу
+    filters.Limit = 10
     filters.Offset = 0
     filters.ExcludePast = true // По умолчанию не показывать прошедшие
 
@@ -143,7 +143,7 @@ func (c *SessionController) GetByID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, session)
 }
 
-// Create handles POST /sessions
+// Create обрабатывает POST /sessions
 func (c *SessionController) Create(ctx *gin.Context) {
 	var req models.SessionRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -152,12 +152,6 @@ func (c *SessionController) Create(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
-
-    // Дополнительная валидация, если нужна (например, дата в будущем)
-    // if req.DateTime.Before(time.Now()) {
-    //     ctx.JSON(http.StatusBadRequest, gin.H{"error": "Session date must be in the future"})
-    //     return
-    // }
 
 	creatorID, ok := getUserIDFromContext(ctx)
 	if !ok {
@@ -178,7 +172,7 @@ func (c *SessionController) Create(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, session)
 }
 
-// Update handles PUT /sessions/:id
+// Update обрабатывает PUT /sessions/:id
 func (c *SessionController) Update(ctx *gin.Context) {
 	sessionIDStr := ctx.Param("id")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -200,7 +194,6 @@ func (c *SessionController) Update(ctx *gin.Context) {
 		return
 	}
 
-	// --- Авторизация: Проверяем, что пользователь - создатель сессии ---
 	existingSession, err := c.repo.GetByID(ctx.Request.Context(), sessionID)
 	if err != nil {
 		if errors.Is(err, repositories.ErrSessionNotFound) {
@@ -217,7 +210,6 @@ func (c *SessionController) Update(ctx *gin.Context) {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: You can only update your own sessions"})
 		return
 	}
-    // --- Конец проверки авторизации ---
 
 
 	// Передаем контекст запроса в репозиторий
@@ -236,7 +228,7 @@ func (c *SessionController) Update(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, updatedSession)
 }
 
-// Delete handles DELETE /sessions/:id
+// Delete обрабатывает DELETE /sessions/:id
 func (c *SessionController) Delete(ctx *gin.Context) {
 	sessionIDStr := ctx.Param("id")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -264,14 +256,10 @@ func (c *SessionController) Delete(ctx *gin.Context) {
 	}
 
 	if existingSession.CreatorID != userID {
-        // Возможно, стоит добавить проверку роли (администратор может удалять чужие сессии)
-        // userRole, _ := ctx.Get(middleware.ContextUserRoleKey)
-        // if userRole != "admin" { ... }
         log.Printf("WARN: User %s attempted to delete session %s owned by %s", userID, sessionID, existingSession.CreatorID)
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: You can only delete your own sessions"})
 		return
 	}
-    // --- Конец проверки авторизации ---
 
 
 	// Передаем контекст запроса в репозиторий
@@ -290,7 +278,7 @@ func (c *SessionController) Delete(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Session deleted successfully"})
 }
 
-// GetParticipants handles GET /sessions/:id/participants
+// GetParticipants обрабатывает GET /sessions/:id/participants
 func (c *SessionController) GetParticipants(ctx *gin.Context) {
 	sessionIDStr := ctx.Param("id")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -344,7 +332,7 @@ func (c *SessionController) JoinSession(ctx *gin.Context) {
 		return
     }
 
-    // Запрещаем создателю присоединяться к своей сессии как участнику (опционально, зависит от логики)
+    // Запрещаем создателю присоединяться к своей сессии как участнику 
     if session.CreatorID == userID {
          ctx.JSON(http.StatusBadRequest, gin.H{"error": "Creator cannot join their own session as a participant"})
          return
@@ -417,11 +405,6 @@ func (c *SessionController) LeaveSession(ctx *gin.Context) {
 		return
 	}
 
-    // Опционально: Проверить, существует ли сессия (хотя Delete вернет ошибку, если FK нарушен)
-    // _, err = c.repo.GetByID(ctx.Request.Context(), sessionID)
-    // if err != nil { ... }
-
-
 	// Пытаемся покинуть сессию (репозиторий проверит, был ли пользователь участником)
 	err = c.repo.LeaveSession(ctx.Request.Context(), sessionID, userID)
 	if err != nil {
@@ -458,16 +441,7 @@ func (c *SessionController) GetRecommendedSessions(ctx *gin.Context) {
 			// Если userID невалиден, ведем себя как неавторизованный
 			recommendedSessions, err = c.repo.GetGeneralRecommendedSessions(requestContext, limit)
 		} else {
-			// Получаем навыки пользователя (нужен доступ к UserRepository или передача навыков)
-			// Для простоты MVP, предположим, что навыки мы можем получить или они не важны для первой версии рекомендаций
-			// Здесь можно было бы вызвать userRepo.GetByID(userID) и взять user.Skills
-			// Пока что используем пустой срез навыков, что приведет к общей рекомендации для авторизованных
 			var userSkills []string
-            // TODO: Если есть userRepo, получить user.Skills
-            // tempUser, userErr := c.userRepo.GetByID(requestContext, userID) // Потребует внедрения userRepo
-            // if userErr == nil && tempUser != nil {
-            //     userSkills = tempUser.Skills // pq.StringArray нужно будет конвертировать в []string
-            // }
 
 			recommendedSessions, err = c.repo.GetRecommendedSessionsForUser(requestContext, userID, userSkills, limit)
 		}
@@ -523,7 +497,6 @@ func (c *SessionController) ExportSessionICS(ctx *gin.Context) {
     event.SetStartAt(session.DateTime)
 
     // Рассчитаем примерную длительность сессии (например, 1.5 часа)
-    // В реальном приложении у сессии должно быть поле duration или end_time
     assumedDuration := 90 * time.Minute
     event.SetEndAt(session.DateTime.Add(assumedDuration))
 
@@ -542,7 +515,7 @@ func (c *SessionController) ExportSessionICS(ctx *gin.Context) {
 }
 
 
-// GetMySessions handles GET /api/sessions/my (sessions created by the logged-in user)
+// GetMySessions обрабатывает GET /api/sessions/my 
 func (c *SessionController) GetMySessions(ctx *gin.Context) {
     userID, ok := getUserIDFromContext(ctx) // Ensure this helper is robust
     if !ok {
@@ -551,10 +524,9 @@ func (c *SessionController) GetMySessions(ctx *gin.Context) {
     }
 
     var filters models.SessionSearchFilters
-    // Set default pagination and other potential filters from query params if needed
-    filters.Limit = 10 // Default limit
+    filters.Limit = 10 
     filters.Offset = 0
-    filters.ExcludePast = false // For "my sessions", user might want to see past ones too
+    filters.ExcludePast = false
 
     if limitStr := ctx.Query("limit"); limitStr != "" {
         if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
@@ -567,20 +539,18 @@ func (c *SessionController) GetMySessions(ctx *gin.Context) {
         }
     }
      if excludePastQuery := ctx.Query("exclude_past"); excludePastQuery != "" {
-        if excludePastQuery == "true" { // Only if explicitly set to true
+        if excludePastQuery == "true" { 
             filters.ExcludePast = true
         }
     }
 
-    filters.CreatorID = &userID // <<<--- THIS IS THE KEY PART
+    filters.CreatorID = &userID 
 
 	if excludePastQuery := ctx.Query("exclude_past"); excludePastQuery == "false" {
          filters.ExcludePast = false
     } else {
-         filters.ExcludePast = true // Default to excluding past unless "false" is specified
+         filters.ExcludePast = true 
     }
-    // Add parsing for other filters if you want to support them on "my sessions" (e.g., category)
-    // filters.Category = ctx.Query("category")
 
     sessions, totalCount, err := c.repo.SearchSessions(ctx.Request.Context(), filters)
     if err != nil {
@@ -603,7 +573,7 @@ func (c *SessionController) GetMySessions(ctx *gin.Context) {
 }
 
 
-// GetJoinedSessions handles GET /api/sessions/joined (sessions joined by the logged-in user)
+// GetJoinedSessions обрабатывает GET /api/sessions/joined 
 func (c *SessionController) GetJoinedSessions(ctx *gin.Context) {
     userID, ok := getUserIDFromContext(ctx)
     if !ok {
@@ -612,12 +582,11 @@ func (c *SessionController) GetJoinedSessions(ctx *gin.Context) {
     }
 
     var filters models.SessionSearchFilters
-    // --- Pagination ---
 	limitStr := ctx.DefaultQuery("limit", "10")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
 		log.Printf("GetJoinedSessions: Invalid or missing limit query param '%s', defaulting to 10. Error: %v", limitStr, err)
-		limit = 10 // Default limit if parsing fails or value is invalid
+		limit = 10 
 	}
 	filters.Limit = limit
 
@@ -625,12 +594,10 @@ func (c *SessionController) GetJoinedSessions(ctx *gin.Context) {
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page <= 0 {
 		log.Printf("GetJoinedSessions: Invalid or missing page query param '%s', defaulting to 1. Error: %v", pageStr, err)
-		page = 1 // Default page if parsing fails or value is invalid
+		page = 1 
 	}
 	filters.Offset = (page - 1) * filters.Limit // Calculate offset
 
-	// --- Other Optional Filters (example: exclude_past) ---
-	// By default, let's say we don't exclude past joined sessions unless specified
 	if excludePastQuery := ctx.Query("exclude_past"); excludePastQuery == "true" {
 		filters.ExcludePast = true
 	} else {
@@ -639,7 +606,6 @@ func (c *SessionController) GetJoinedSessions(ctx *gin.Context) {
 
 	log.Printf("GetJoinedSessions: Applying filters: %+v for userID: %s", filters, userID.String())
 
-	// Call the repository method
 	sessions, totalCount, err := c.repo.GetJoinedSessionsByUserID(ctx.Request.Context(), userID, filters)
 	if err != nil {
 		log.Printf("GetJoinedSessions: Error from GetJoinedSessionsByUserID for userID %s: %v", userID, err)
@@ -649,7 +615,6 @@ func (c *SessionController) GetJoinedSessions(ctx *gin.Context) {
 
 	log.Printf("GetJoinedSessions: Found %d joined sessions for userID: %s. Total items: %d", len(sessions), userID.String(), totalCount)
 
-	// Calculate total_pages, ensuring no division by zero if limit is somehow 0
 	totalPages := 0
 	if filters.Limit > 0 {
 		totalPages = (totalCount + filters.Limit - 1) / filters.Limit
@@ -661,7 +626,7 @@ func (c *SessionController) GetJoinedSessions(ctx *gin.Context) {
 		"meta": gin.H{
 			"total_items":  totalCount,
 			"per_page":     filters.Limit,
-			"current_page": page, // Return the page number requested
+			"current_page": page, 
 			"total_pages":  totalPages,
 		},
 	})

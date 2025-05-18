@@ -10,25 +10,24 @@ import (
 )
 
 func main() {
-    // Load configuration
+    // Загрузка конфигурации
     cfg := config.LoadConfig()
 
-    // Initialize database
+    // Инициализация базы данных
     db, err := config.InitDB(cfg)
     if err != nil {
         log.Fatalf("Failed to connect to database: %v", err)
     }
 
-    // Setup router
+    // Настройка маршрутизатора
     r := routes.SetupRouter(db)
 
     sessionRepo := repositories.NewSessionRepository(db)
     userRepo := repositories.NewUserRepository(db)
     notifRepo := repositories.NewNotificationRepository(db)
 
-    // Запуск фоновой задачи для проверки напоминаний (очень упрощенно)
+    // Запуск фоновой задачи для проверки напоминаний
     go tasks.CheckSessionReminders(db, sessionRepo, userRepo, notifRepo) // Передаем зависимости
-    // Start server
     log.Printf("Server starting on port %s", cfg.ServerPort)
     if err := r.Run(":" + cfg.ServerPort); err != nil {
         log.Fatalf("Failed to start server: %v", err)

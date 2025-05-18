@@ -51,8 +51,6 @@ func (r *FeedbackRepository) CreateFeedback(ctx context.Context, req models.Feed
 		// Код '23503' - foreign_key_violation
 		if errors.As(err, &pqErr) && pqErr.Code == "23503" {
 			log.Printf("WARN: Attempted feedback for non-existent session %s or user %s", sessionID, userID)
-			// Можно вернуть более конкретную ошибку, но для простоты вернем общую ошибку БД
-            // или даже ErrSessionNotFound/ErrUserNotFound, если есть доступ к UserRepo
             return nil, fmt.Errorf("%w: foreign key constraint violation (%s)", ErrDatabase, pqErr.Constraint)
 		}
 

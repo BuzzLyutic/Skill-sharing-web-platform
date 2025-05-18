@@ -12,13 +12,13 @@ import (
         "github.com/jmoiron/sqlx"
 )
 
-// SetupRouter configures the Gin router
+// SetupRouter настраивает маршрутизатор Gin
 func SetupRouter(db *sqlx.DB) *gin.Engine {
         r := gin.Default()
         cfg := config.LoadConfig()
     
         jwtCfg := config.GetJWTConfig()
-        // --- Middleware ---
+        // Middleware
 	    jwtAuth := middleware.JWTAuthMiddleware(jwtCfg)
         adminAuth := middleware.RoleAuthMiddleware(models.RoleAdmin)
 	    moderatorAuth := middleware.RoleAuthMiddleware(models.RoleModerator)
@@ -31,19 +31,19 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
         corsConfig.AllowCredentials = true
         r.Use(cors.New(corsConfig))
     
-        // Initialize repositories
+        // Инициализация репозиториев
         userRepo := repositories.NewUserRepository(db)
         sessionRepo := repositories.NewSessionRepository(db)
         feedbackRepo := repositories.NewFeedbackRepository(db)
         notifRepo := repositories.NewNotificationRepository(db)
 
-        // Initialize controllers
+        // Инициализация контроллеров
         userController := controllers.NewUserController(userRepo)
         sessionController := controllers.NewSessionController(sessionRepo, userRepo, notifRepo)
         feedbackController := controllers.NewFeedbackController(feedbackRepo, sessionRepo)
         notificationController := controllers.NewNotificationController(notifRepo)
     
-        // Initialize auth handlers
+        // Инициализация обработчиков аутентификации
         authHandler := handlers.NewAuthHandler(db, jwtCfg)
         oauthHandler := handlers.NewOAuthHandler(db, cfg)
     
@@ -77,28 +77,23 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
                 users.PUT("/me/password", userController.ChangePassword)
             }
 
-            // --- Admin Routes ---
+            // Admin Routes
 		    admin := api.Group("/admin")
 		    admin.Use(adminAuth) // Требуется роль admin
 		    {
 			    adminUsers := admin.Group("/users")
 			    {
-				    adminUsers.GET("", userController.GetAll)         // Список пользователей
-				    adminUsers.GET("/:id", userController.GetByID)    // Конкретный пользователь
+				    adminUsers.GET("", userController.GetAll)        
+				    adminUsers.GET("/:id", userController.GetByID)   
 				    adminUsers.PUT("/:id/role", userController.UpdateUserRole) // Смена роли
 				    adminUsers.DELETE("/:id", userController.Delete)  // Удаление пользователя
-                    // adminUsers.PUT("/:id", userController.Update) // Можно оставить, если админ должен менять профиль
 			    }
-                // adminSessions := admin.Group("/sessions") ...
-                // adminFeedback := admin.Group("/feedback") ...
 		    }
 
-            // Moderator routes
             moderator := api.Group("/moderator")
             moderator.Use(moderatorAuth)
             {
                 moderator.DELETE("/sessions/:id", sessionController.Delete)
-                //moderator.DELETE("/feedback/:id", feedbackController.Delete)
             }
     
             // Session routes

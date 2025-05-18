@@ -7,7 +7,7 @@ const (
 )
 
 const (
-    RoleUser      = "user"      // Example basic role
+    RoleUser      = "user"
     RoleModerator = "moderator"
     RoleAdmin     = "admin"
 )

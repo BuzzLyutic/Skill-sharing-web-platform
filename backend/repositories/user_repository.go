@@ -28,6 +28,8 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
         return &UserRepository{db: db}
 }
 
+var _ UserRepositoryInterface = (*UserRepository)(nil) // Static check
+
 // GetAll retrieves all users
 func (r *UserRepository) GetAll(ctx context.Context) ([]models.User, error) {
         users := []models.User{}
@@ -195,7 +197,7 @@ func (r *UserRepository) InvalidateRefreshToken(ctx context.Context, userID uuid
 	return r.SaveRefreshToken(ctx, userID, nil) // Просто вызываем Save с nil
 }
     
-// CreateOAuthUser ... (добавить context, GetContext, обработку ошибок, *models.User)
+// CreateOAuthUser 
 func (r *UserRepository) CreateOAuthUser(ctx context.Context, user models.User) (*models.User, error) {
         query := `
             INSERT INTO users (id, email, password_hash, oauth_provider, oauth_id, name, bio, skills, role, average_rating, created_at, updated_at)
@@ -232,7 +234,7 @@ func (r *UserRepository) CreateOAuthUser(ctx context.Context, user models.User) 
         return &createdUser, nil
 }
 
-// GetByOAuth ... (добавить context, GetContext, обработку ошибок, *models.User)
+// GetByOAuth 
 func (r *UserRepository) GetByOAuth(ctx context.Context, provider, oauthID string) (*models.User, error) {
         var user models.User
         query := `SELECT * FROM users WHERE oauth_provider = $1 AND oauth_id = $2`
@@ -247,7 +249,7 @@ func (r *UserRepository) GetByOAuth(ctx context.Context, provider, oauthID strin
         return &user, nil
     }
 
- // LinkOAuthToUser ... (добавить context, ExecContext, обработку ошибок)
+ // LinkOAuthToUser 
 func (r *UserRepository) LinkOAuthToUser(ctx context.Context, userID uuid.UUID, provider, oauthID string) error {
         query := `
             UPDATE users
@@ -262,8 +264,6 @@ func (r *UserRepository) LinkOAuthToUser(ctx context.Context, userID uuid.UUID, 
         rowsAffected, _ := result.RowsAffected()
         if rowsAffected == 0 {
             log.Printf("OAuth link skipped or failed for user %s, provider %s: 0 rows affected (maybe already linked?)", userID, provider)
-            // Можно вернуть ошибку, если 0 строк - это проблема
-            // return errors.New("account already linked or user not found")
         }
         return nil
 }
@@ -288,10 +288,10 @@ func (r *UserRepository) UpdateUserRole(ctx context.Context, userID uuid.UUID, n
 }
 
 
-// Helper to get user with password hash (if not already available or to ensure fresh data)
+// Помощник для получения хэша пароля пользователя (если он еще не доступен или для обеспечения свежести данных)
 func (r *UserRepository) GetByIDWithPassword(ctx context.Context, id uuid.UUID) (*models.User, error) {
     var user models.User
-    query := `SELECT * FROM users WHERE id = $1` // Selects all, including password_hash
+    query := `SELECT * FROM users WHERE id = $1` // Выбирает все, включая password_hash
     err := r.db.GetContext(ctx, &user, query, id)
     if err != nil {
         if errors.Is(err, sql.ErrNoRows) {
@@ -303,8 +303,7 @@ func (r *UserRepository) GetByIDWithPassword(ctx context.Context, id uuid.UUID) 
     return &user, nil
 }
 
-// UpdatePassword updates a user's password_hash.
-// It assumes current password has already been verified by the caller (controller/service).
+// UpdatePassword обновляет пароль пользователя password_hash.
 func (r *UserRepository) UpdatePassword(ctx context.Context, userID uuid.UUID, newPasswordHash string) error {
     query := `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`
     result, err := r.db.ExecContext(ctx, query, newPasswordHash, userID)
@@ -314,7 +313,7 @@ func (r *UserRepository) UpdatePassword(ctx context.Context, userID uuid.UUID, n
     }
     rowsAffected, _ := result.RowsAffected()
     if rowsAffected == 0 {
-        return ErrUserNotFound // Should not happen if userID is from a valid token
+        return ErrUserNotFound 
     }
     return nil
 }
