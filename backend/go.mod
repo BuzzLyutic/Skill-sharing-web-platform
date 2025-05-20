@@ -1,6 +1,6 @@
 module github.com/BuzzLyutic/Skill-sharing-web-platform
 
-go 1.24.1
+go 1.24.0
 
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
