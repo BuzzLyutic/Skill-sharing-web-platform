@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS feedback;
+DROP TABLE IF EXISTS session_participants;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS users;
