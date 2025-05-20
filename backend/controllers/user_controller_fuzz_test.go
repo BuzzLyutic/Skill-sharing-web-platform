@@ -136,9 +136,9 @@ func (m *mockUserRepository) UpdatePassword(ctx context.Context, userID uuid.UUI
 func FuzzUserControllerGetByID(f *testing.F) {
 	f.Add("123e4567-e89b-12d3-a456-426614174000") // Valid UUID
 	f.Add("not-a-valid-uuid")
-	f.Add("")  // Empty string
-	f.Add("abcdef") // Short string
-	f.Add(strings.Repeat("a", 100)) // Long string
+	f.Add("")  
+	f.Add("abcdef") 
+	f.Add(strings.Repeat("a", 100)) 
 	existingUUID := uuid.New()
 	f.Add(existingUUID.String())
 
