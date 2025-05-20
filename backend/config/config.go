@@ -5,6 +5,7 @@ import (
     "github.com/jmoiron/sqlx"
     "github.com/joho/godotenv"
     "log"
+    "os"
     _ "github.com/lib/pq"
 )
 
@@ -37,14 +38,31 @@ func LoadConfig() Config {
 
 // InitDB инициализирует подключение к базе данных
 func InitDB(cfg Config) (*sqlx.DB, error) {
-    dsn := fmt.Sprintf(
-        "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-        cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName,
-    )
+    var dsn string
+    databaseURL := os.Getenv("DATABASE_URL")
+
+    if databaseURL != "" {
+        dsn = databaseURL
+        log.Println("InitDB: Using DATABASE_URL environment variable for connection.")
+    } else {
+        // Fallback to individual components if DATABASE_URL is not set (for local dev without DATABASE_URL)
+        log.Println("InitDB: DATABASE_URL not set, constructing DSN from individual DB_HOST, DB_PORT, etc.")
+        dsn = fmt.Sprintf(
+            "host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", // Use %s for sslmode
+            cfg.DBHost,
+            cfg.DBPort,
+            cfg.DBUser,
+            cfg.DBPassword,
+            cfg.DBName,
+            GetEnv("DB_SSLMODE", "disable"),
+        )
+    }
+    log.Printf("InitDB: Attempting to connect with DSN (credentials redacted in actual log if printed): %s", "[DSN_Structure_Only]")
+
 
     db, err := sqlx.Connect("postgres", dsn)
     if err != nil {
-        return nil, fmt.Errorf("failed to connect to database: %w", err)
+        return nil, fmt.Errorf("failed to connect to application database using DSN: %w", err)
     }
 
     return db, nil
