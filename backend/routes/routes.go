@@ -25,7 +25,7 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
 
         // Настройка CORS
         corsConfig := cors.DefaultConfig()
-        corsConfig.AllowOrigins = []string{"http://localhost:3000"}
+        corsConfig.AllowOrigins = []string{"http://localhost:3000", "http://localhost:3001"}
         corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
         corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
         corsConfig.AllowCredentials = true

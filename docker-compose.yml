@@ -14,6 +14,12 @@ services:
       - "5433:5432" # Use a different host port if 5432 is taken
     networks:
       - go_project_network
+    healthcheck: # Add this
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-gouser} -d ${DB_NAME:-godb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 15s # Give it some time to start before first check
 
   backend:
     build:
@@ -33,9 +39,9 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-yoursupersecretkey}
       # ... other backend env vars
     depends_on:
-      - postgres_db
-    volumes: # For local development with hot-reloading (if your Go setup supports it)
-      - ./backend:/app
+      postgres_db: # Change this
+        condition: service_healthy # Wait for the healthcheck to pass
+
     networks:
       - go_project_network
 
