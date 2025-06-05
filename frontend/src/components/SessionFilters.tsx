@@ -13,7 +13,6 @@ export interface SessionFilterParams {
   date_from?: string; // ISO string или пустая строка
   date_to?: string;   // ISO string или пустая строка
   exclude_past?: boolean;
-  // Добавьте другие фильтры по мере необходимости
 }
 
 interface SessionFiltersProps {

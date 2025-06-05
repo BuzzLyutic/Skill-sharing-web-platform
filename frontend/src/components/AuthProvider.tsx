@@ -41,12 +41,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsLoading(false);
         return;
     }
-    console.log("fetchUser: Attempting to fetch user with token:", currentToken);
     try {
       const { data } = await apiClient.get<User>('/api/users/me', {
         headers: { 'Authorization': `Bearer ${currentToken}` } // Явно передаем токен здесь на всякий случай
       });
-      console.log("fetchUser: User data received:", data);
       setUser(data);
       localStorage.setItem('user', JSON.stringify(data)); // Сохраняем пользователя в localStorage
     } catch (error: any) {
@@ -67,7 +65,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const storedToken = localStorage.getItem('accessToken');
     const storedUser = localStorage.getItem('user');
-    console.log("AuthProvider Mount: storedToken:", storedToken);
     if (storedToken) {
       setAccessToken(storedToken);
       if (storedUser) {

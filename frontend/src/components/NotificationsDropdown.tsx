@@ -22,7 +22,6 @@ export default function NotificationsDropdown() {
       const response = await apiClient.get<Notification[]>('/api/notifications/unread?limit=5'); // Берем 5 последних
       setNotifications(response.data);
     } catch (error) {
-      console.error("Failed to fetch notifications:", error);
     } finally {
       setIsLoading(false);
     }
@@ -48,7 +47,6 @@ export default function NotificationsDropdown() {
       await apiClient.post(`/api/notifications/${notificationId}/read`);
       setNotifications(prev => prev.filter(n => n.id !== notificationId)); // Удаляем из списка
     } catch (error) {
-      console.error("Failed to mark notification as read:", error);
     }
   };
 
@@ -58,7 +56,6 @@ export default function NotificationsDropdown() {
           setNotifications([]); // Очищаем список
           setIsOpen(false); // Закрываем дропдаун
       } catch (error) {
-          console.error("Failed to mark all notifications as read:", error);
       }
   };
 

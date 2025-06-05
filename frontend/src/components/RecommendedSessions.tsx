@@ -26,7 +26,6 @@ export default function RecommendedSessions({ title = "Recommended For You" }: R
         const response = await apiClient.get<Session[]>('/api/sessions/recommended');
         setSessions(response.data);
       } catch (err: any) {
-        console.error('Failed to fetch recommended sessions:', err);
         // Не показываем ошибку пользователю слишком навязчиво, т.к. это доп. фича
         // setError(err.response?.data?.error || 'Could not load recommendations.');
         setSessions([]); // Показываем пустой список в случае ошибки
