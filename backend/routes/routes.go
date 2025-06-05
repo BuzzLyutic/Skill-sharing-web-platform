@@ -58,6 +58,17 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
             authGroup.GET("/google", oauthHandler.GoogleLogin)
             authGroup.GET("/google/callback", oauthHandler.GoogleCallback)
         }
+
+        publicAPI := r.Group("/api")
+        {
+            // Публичные маршруты для сессий
+            publicSessions := publicAPI.Group("/sessions")
+            {
+                publicSessions.GET("/recommended", sessionController.GetRecommendedSessions)
+                publicSessions.GET("", sessionController.GetAll) // если хотите показывать список сессий неавторизованным
+                publicSessions.GET("/:id", sessionController.GetByID) // если хотите показывать детали сессии неавторизованным
+            }
+        }
     
         // API routes (защищенные маршруты)
         api := r.Group("/api")
@@ -101,7 +112,7 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
             {
                 sessions.GET("/my", sessionController.GetMySessions)
                 sessions.GET("", sessionController.GetAll)
-                sessions.GET("/recommended", sessionController.GetRecommendedSessions)
+                //sessions.GET("/recommended", sessionController.GetRecommendedSessions)
                 sessions.GET("/joined", sessionController.GetJoinedSessions)
                 sessions.GET("/:id", sessionController.GetByID)
                 sessions.POST("", sessionController.Create)

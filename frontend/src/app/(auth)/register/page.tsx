@@ -62,7 +62,7 @@ export default function RegisterPage() {
               value={name} 
               onChange={(e) => setName(e.target.value)} 
               required 
-              className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+              className="bg-white border-indigo-200 focus-visible:ring-indigo-500 text-gray-900"
               placeholder="Your full name"
             />
           </div>
@@ -77,7 +77,7 @@ export default function RegisterPage() {
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
               required 
-              className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+              className="bg-white border-indigo-200 focus-visible:ring-indigo-500 text-gray-900"
               placeholder="your.email@example.com"
             />
           </div>
@@ -94,7 +94,7 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)} 
                 required 
                 minLength={6} 
-                className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+                className="bg-white border-indigo-200 focus-visible:ring-indigo-500 text-gray-900"
                 placeholder="Min. 6 characters"
               />
             </div>
@@ -110,7 +110,7 @@ export default function RegisterPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)} 
                 required 
                 minLength={6} 
-                className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+                className="bg-white border-indigo-200 focus-visible:ring-indigo-500 text-gray-900"
                 placeholder="Repeat password"
               />
             </div>
@@ -139,7 +139,7 @@ export default function RegisterPage() {
               id="skills" 
               value={skills} 
               onChange={(e) => setSkills(e.target.value)} 
-              className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+              className="bg-white border-indigo-200 focus-visible:ring-indigo-500 text-gray-900"
               placeholder="e.g., Go, React, SQL, Design"
             />
           </div>

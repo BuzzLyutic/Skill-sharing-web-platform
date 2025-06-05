@@ -57,7 +57,7 @@ return (
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+                className="bg-white border-indigo-200 focus-visible:ring-indigo-500 text-gray-900"
                 placeholder="your.email@example.com"
               />
             </div>
@@ -77,7 +77,7 @@ return (
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-white border-indigo-200 focus-visible:ring-indigo-500"
+                className="bg-white border-indigo-200 focus-visible:ring-indigo-500 text-gray-900"
                 placeholder="Enter your password"
               />
             </div>
