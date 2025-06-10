@@ -25,7 +25,7 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
 
         // Настройка CORS
         corsConfig := cors.DefaultConfig()
-        corsConfig.AllowOrigins = []string{"http://localhost:3000", "http://localhost:3001", "https://skill-sharing-web-platform-frontend.onrender.com"}
+        corsConfig.AllowOrigins = []string{"http://localhost:3000", "http://localhost:3001", "https://skill-sharing-web-platform-frontend.onrender.com", "https://accounts.google.com",}
         corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
         corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
         corsConfig.AllowCredentials = true
@@ -90,6 +90,10 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
 				    adminUsers.PUT("/:id/role", userController.UpdateUserRole) // Смена роли
 				    adminUsers.DELETE("/:id", userController.Delete)  // Удаление пользователя
 			    }
+                adminSessions := admin.Group("/sessions")
+                {
+                adminSessions.DELETE("/:id", sessionController.AdminDeleteSession)
+                }
 		    }
 
             moderator := api.Group("/moderator")

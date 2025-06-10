@@ -631,3 +631,35 @@ func (c *SessionController) GetJoinedSessions(ctx *gin.Context) {
 		},
 	})
 }
+
+// AdminDeleteSession позволяет администратору удалить любую сессию
+func (c *SessionController) AdminDeleteSession(ctx *gin.Context) {
+    sessionID, err := uuid.Parse(ctx.Param("id"))
+    if err != nil {
+        ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session ID"})
+        return
+    }
+
+    requestContext := ctx.Request.Context()
+
+    session, err := c.repo.GetByID(requestContext, sessionID)
+    if err != nil {
+        if errors.Is(err, repositories.ErrSessionNotFound) {
+            ctx.JSON(http.StatusNotFound, gin.H{"error": "Session not found"})
+            return
+        }
+        ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve session"})
+        return
+    }
+
+    err = c.repo.Delete(requestContext, sessionID)
+    if err != nil {
+        ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete session"})
+        return
+    }
+
+    adminID, _ := ctx.Get(middleware.ContextUserIDKey)
+    log.Printf("Admin %v deleted session %s (%s)", adminID, sessionID, session.Title)
+
+    ctx.JSON(http.StatusOK, gin.H{"message": "Session deleted successfully"})
+}

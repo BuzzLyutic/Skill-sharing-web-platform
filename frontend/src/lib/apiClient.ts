@@ -68,7 +68,6 @@ apiClient.interceptors.response.use(
 
       const refreshToken = localStorage.getItem('refreshToken');
       if (!refreshToken) {
-        console.error('No refresh token available.');
         // Возможно, стоит вызвать logout здесь
         isRefreshing = false;
         processQueue(new Error('No refresh token'), null);
@@ -89,7 +88,6 @@ apiClient.interceptors.response.use(
         processQueue(null, data.access_token); // Обрабатываем очередь успешным токеном
         return apiClient(originalRequest); // Повторяем оригинальный запрос с новым токеном
       } catch (refreshError) {
-        console.error('Refresh token failed:', refreshError);
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');

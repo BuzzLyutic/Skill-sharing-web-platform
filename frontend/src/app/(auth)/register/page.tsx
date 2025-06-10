@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Input from '@/components/Input';
 import Button from '@/components/Button';
 import { useRouter } from 'next/navigation';
+import { validateEmail, validatePassword, getEmailError, getPasswordError } from '@/lib/validators';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -14,24 +15,71 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [bio, setBio] = useState('');
-  const [skills, setSkills] = useState(''); // Вводим как строку через запятую
+  const [skills, setSkills] = useState(''); 
   const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const { register, isLoading } = useAuth();
   const router = useRouter();
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+    if (value) {
+      setEmailError(getEmailError(value));
+    } else {
+      setEmailError(null);
+    }
+  };
+
+  const handleEmailBlur = () => {
+    setEmailError(getEmailError(email));
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setPassword(value);
+    if (value) {
+      setPasswordError(getPasswordError(value));
+    } else {
+      setPasswordError(null);
+    }
+  };
+
+  const handlePasswordBlur = () => {
+    setPasswordError(getPasswordError(password));
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    const emailValidationError = getEmailError(email);
+    const passwordValidationError = getPasswordError(password);
+    
+    if (emailValidationError) {
+      setEmailError(emailValidationError);
+      return;
+    }
+    
+    if (passwordValidationError) {
+      setPasswordError(passwordValidationError);
+      return;
+    }
+
+    if (!name.trim()) {
+      setError('Name is required');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords don't match");
       return;
     }
 
-    const skillsArray = skills.split(',').map(s => s.trim()).filter(s => s !== ''); // Преобразуем строку в массив
+    const skillsArray = skills.split(',').map(s => s.trim()).filter(s => s !== '');
 
     try {
       await register({ name, email, password, bio, skills: skillsArray });
-      // Перенаправление произойдет внутри register() при успехе
     } catch (err: any) {
         setError(err.response?.data?.error || err.message || 'Registration failed');
     }
@@ -75,11 +123,17 @@ export default function RegisterPage() {
               type="email" 
               id="email" 
               value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
+              onChange={handleEmailChange}
+              onBlur={handleEmailBlur}
               required 
-              className="bg-white border-indigo-200 focus-visible:ring-indigo-500 text-gray-900"
+              className={`bg-white border-indigo-200 focus-visible:ring-indigo-500 text-gray-900 ${
+                emailError ? 'border-red-500' : ''
+              }`}
               placeholder="your.email@example.com"
             />
+            {emailError && (
+              <p className="text-xs text-red-600 mt-1">{emailError}</p>
+            )}
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -91,12 +145,17 @@ export default function RegisterPage() {
                 type="password" 
                 id="password" 
                 value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
+                onChange={handlePasswordChange}
+                onBlur={handlePasswordBlur}
                 required 
-                minLength={6} 
-                className="bg-white border-indigo-200 focus-visible:ring-indigo-500 text-gray-900"
+                className={`bg-white border-indigo-200 focus-visible:ring-indigo-500 text-gray-900 ${
+                  passwordError ? 'border-red-500' : ''
+                }`}
                 placeholder="Min. 6 characters"
               />
+              {passwordError && (
+                <p className="text-xs text-red-600 mt-1">{passwordError}</p>
+              )}
             </div>
             
             <div className="space-y-2">
@@ -125,7 +184,7 @@ export default function RegisterPage() {
               value={bio} 
               onChange={(e) => setBio(e.target.value)} 
               rows={3} 
-              className="w-full rounded-lg border border-indigo-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 text-sm"
+              className="w-full rounded-lg border border-indigo-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 text-sm text-gray-900"
               placeholder="Tell us a bit about yourself"
             ></textarea>
           </div>
@@ -152,8 +211,8 @@ export default function RegisterPage() {
 
           <Button 
             type="submit" 
-            disabled={isLoading} 
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+            disabled={isLoading || !!emailError || !!passwordError} 
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <>

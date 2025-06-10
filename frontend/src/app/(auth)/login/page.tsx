@@ -7,17 +7,44 @@ import Link from 'next/link';
 import Input from '@/components/Input';
 import Button from '@/components/Button';
 import { useRouter } from 'next/navigation';
+import { validateEmail, getEmailError } from '@/lib/validators';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const { login, isLoading } = useAuth();
   const router = useRouter();
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+    if (value) {
+      setEmailError(getEmailError(value));
+    } else {
+      setEmailError(null);
+    }
+  };
+
+  const handleEmailBlur = () => {
+    setEmailError(getEmailError(email));
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    const emailValidationError = getEmailError(email);
+    if (emailValidationError) {
+      setEmailError(emailValidationError);
+      return;
+    }
+
+    if (!password) {
+      setError('Password is required');
+      return;
+    }
+
     try {
       await login({ email, password });
       // Перенаправление произойдет внутри login() при успехе
@@ -31,7 +58,7 @@ export default function LoginPage() {
       window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`;
   };
 
-return (
+  return (
     <div className="max-w-md mx-auto py-12 px-4 sm:px-0">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-600">
@@ -55,11 +82,17 @@ return (
                 type="email"
                 id="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
+                onBlur={handleEmailBlur}
                 required
-                className="bg-white border-indigo-200 focus-visible:ring-indigo-500 text-gray-900"
+                className={`bg-white border-indigo-200 focus-visible:ring-indigo-500 text-gray-900 ${
+                  emailError ? 'border-red-500' : ''
+                }`}
                 placeholder="your.email@example.com"
               />
+              {emailError && (
+                <p className="text-xs text-red-600 mt-1">{emailError}</p>
+              )}
             </div>
             
             <div className="space-y-2">
@@ -90,8 +123,8 @@ return (
             
             <Button 
               type="submit" 
-              disabled={isLoading} 
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+              disabled={isLoading || !!emailError} 
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>
