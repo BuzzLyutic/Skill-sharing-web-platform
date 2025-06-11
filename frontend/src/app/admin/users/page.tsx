@@ -18,6 +18,7 @@ export default function AdminUsersPage() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingRoleId, setUpdatingRoleId] = useState<string | null>(null); // ID юзера, чья роль обновляется
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const router = useRouter();
 
   // 1. Защита маршрута и загрузка пользователей
@@ -34,7 +35,7 @@ export default function AdminUsersPage() {
         setLoadingUsers(true);
         setError(null);
         try {
-          const response = await apiClient.get<User[]>('/api/admin/users'); // Используем админский эндпоинт
+          const response = await apiClient.get<User[]>('/api/admin/users');
           setUsers(response.data);
         } catch (err: any) {
           console.error('Failed to fetch users:', err);
@@ -46,6 +47,27 @@ export default function AdminUsersPage() {
       fetchUsers();
     }
   }, [authLoading, isAuthenticated, currentUser, router]);
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingUserId(userId);
+    setError(null);
+
+    try {
+      await apiClient.delete(`/api/admin/users/${userId}`);
+      // Удаляем пользователя из локального состояния
+      setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+      console.log(`Successfully deleted user ${userId}`);
+    } catch (err: any) {
+      console.error('Failed to delete user:', err);
+      setError(err.response?.data?.error || `Failed to delete user.`);
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
 
   // 3. Обработчик изменения роли
   const handleRoleChange = async (targetUserId: string, newRole: UserRole) => {
@@ -91,7 +113,7 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">User Management</h1>
+      <h1 className="text-2xl font-bold mb-4 text-gray-900">User Management</h1>
       {error && <p className="text-red-500 mb-4">Error: {error}</p>}
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
@@ -112,7 +134,7 @@ export default function AdminUsersPage() {
                 {currentUser.id === user.id ? (
                   <span className="text-gray-400 italic">Cannot change own role</span>
                 ) : (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 text-gray-900">
                     <select
                       value={user.role} // Текущее значение
                       onChange={(e: ChangeEvent<HTMLSelectElement>) =>
@@ -128,25 +150,23 @@ export default function AdminUsersPage() {
                       ))}
                     </select>
                      {updatingRoleId === user.id && <span className="text-xs text-gray-500">Saving...</span>}
-                     {/* Кнопка "Save" не обязательна, если сохранение идет по onChange select'а */}
-                     {/* <Button
-                        size="sm"
-                        onClick={() => handleRoleChange(user.id, user.role)} // Передать выбранную роль из состояния
-                        disabled={updatingRoleId === user.id}
-                     >
-                        {updatingRoleId === user.id ? 'Saving...' : 'Save'}
-                     </Button> */}
+                     
                   </div>
                 )}
               </td>
-              {/* Можно добавить кнопку удаления пользователя */}
-               {/* <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                 {currentUser.id !== user.id && (
-                    <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(user.id)}>
-                        Delete
-                    </Button>
-                 )}
-               </td> */}
+               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  {currentUser.id !== user.id && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={() => handleDeleteUser(user.id as string)}
+                    disabled={deletingUserId === user.id}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {deletingUserId === user.id ? 'Deleting...' : 'Delete'}
+                  </Button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

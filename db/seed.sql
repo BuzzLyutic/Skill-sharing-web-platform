@@ -5,7 +5,7 @@
 -- Пароль для всех: 'password123'
 -- Реальный bcrypt хэш для 'password123' с cost factor 10:
 -- $2a$10$3QxDjD1ylgBnxg8MvGLUe.NL2eRe1Rea0LO6DO0j3aBJxPVvdqGSq
-
+-- $2a$10$nRo0B5Fo1ReES5bX1UGR5O6MJW4aJvO266DEii.McztbTHoQ9764y
 -- Admin User
 INSERT INTO users (id, email, password_hash, name, role, skills, bio, average_rating, created_at, updated_at) VALUES
 ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'admin@example.com', '$2a$10$3QxDjD1ylgBnxg8MvGLUe.NL2eRe1Rea0LO6DO0j3aBJxPVvdqGSq', 'Admin User', 'admin', '{"Go", "React", "Docker", "System Administration"}', 'Platform administrator with extensive technical background', 5.0, NOW() - INTERVAL '6 months', NOW());
