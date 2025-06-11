@@ -4,7 +4,6 @@ import { Inter } from "next/font/google";
 import "@/styles/globals.css"; // Импорт Tailwind стилей
 import { AuthProvider } from "@/components/AuthProvider";
 import Navbar from "@/components/Navbar"; // Импортируем Navbar
-import AdminNav from '@/components/AdminNav';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,7 +25,6 @@ export default function RootLayout({
       <body className={`${inter.className} bg-gray-50 min-h-screen flex flex-col`}>
         <AuthProvider>
           <Navbar />
-          <AdminNav />
           <main className="flex-grow container mx-auto px-4 py-8 sm:px-6 lg:px-8">
             {children}
           </main>
